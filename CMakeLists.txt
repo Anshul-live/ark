@@ -12,6 +12,7 @@ add_executable(ark
     src/commands/cat-file.cpp
     src/utils/compress.cpp
     src/utils/objects.cpp
+    src/commands/add.cpp
 )
 
 target_include_directories(ark PUBLIC ${CMAKE_SOURCE_DIR}/include)

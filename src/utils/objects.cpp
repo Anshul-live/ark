@@ -12,7 +12,6 @@
 
     std::string Object::getSha256(){
     unsigned char hash[SHA256_DIGEST_LENGTH];
-    std::string arkPath = ".ark";
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
     SHA256_Update(&sha256, content.c_str(), content.size());
@@ -26,7 +25,7 @@
     return hexStream.str();
     }
     void Object::writeObjectToDisk(){
-        std::string arkPath = arkDir();
+        std::string arkPath = arkDir() + "/.ark";
         std::string dirName = arkPath + "/objects/" + hash.substr(0, 2);
         std::string fileName = dirName + "/" + hash.substr(2);
         std::filesystem::create_directories(dirName);

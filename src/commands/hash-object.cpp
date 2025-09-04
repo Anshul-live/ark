@@ -8,12 +8,11 @@
 #include <compress.h>
 #include <objects.h>
 
-void hashObject(const std::string& filename) {
+Blob* hashObject(const std::string& filename) {
     if(!std::filesystem::is_regular_file(filename)){
         std::cerr<<"cannot hash given object not a normal file.\n";
-        return;
+        return nullptr;
     }
     Blob *blob = new Blob(filename);
-    std::cout<<"hash: "<<blob->hash<<"\n";
-    blob->writeObjectToDisk();
+    return blob;
 }
