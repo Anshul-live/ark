@@ -36,16 +36,16 @@ void add(const std::vector<std::string>& paths) {
     // Write index
     std::ostringstream index_stream;
     for (auto& entry : index) {
-        std::string relativePath = std::filesystem::relative(entry.first, repo_root).string();
-        index_stream << entry.second << " " << relativePath << "\n";
+        std::string relative_path = std::filesystem::relative(entry.first, repo_root).string();
+        index_stream << entry.second << " " << relative_path << "\n";
     }
 
-    std::ofstream outFile(index_path, std::ios::binary);
-    if (!outFile) {
+    std::ofstream out_file(index_path, std::ios::binary);
+    if (!out_file) {
         std::cerr << "Failed to open index file for writing.\n";
         return;
     }
     std::cout<<index_stream.str();
-    outFile << index_stream.str();
-    outFile.close();
+    out_file << index_stream.str();
+    out_file.close();
 }
