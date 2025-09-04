@@ -118,7 +118,7 @@ Quick demo:
 ```bash
 ./build/ark init
 ./build/ark add README.md
-HASH=$(./build/ark hash-object README.md | awk '/Object hashed:/ {print $3}')
+HASH=$(./build/ark hash-object README.md)
 ./build/ark cat-file "$HASH"
 ```
 
