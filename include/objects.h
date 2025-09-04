@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <string>
+#include <sstream>
 #include <openssl/sha.h>
 #include <compress.h>
 
@@ -32,6 +33,14 @@ Blob(const std::string& filename){
     this->content = "blob " + std::to_string(file_content.size()) + '\0' + file_content;
     this->hash = this->getSha256();
     }
+};
+
+class Tree:public Object{
+    public:
+    Tree(const std::string& dirname){
+
+    }
+
 };
 
 #endif
