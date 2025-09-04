@@ -6,7 +6,7 @@
 
 void init(){
     std::cout << "initialising ark" << std::endl;
-    std::string arkPath = arkDir();
+    std::string arkPath = ".ark";
     if(std::filesystem::exists(arkPath)){
         std::cout << "ark already initialised" << std::endl;
         return;

@@ -1,7 +1,11 @@
 #include <iostream>
+#include <vector>
+#include <string>
+
 #include <init.h>
 #include <hash-object.h>
 #include <cat-file.h>
+#include <add.h>
 
 int main(int argc,char *argv[]){
     if(argc < 2){
@@ -17,7 +21,9 @@ int main(int argc,char *argv[]){
             return 1;
         }
         std::string filename = argv[2];
-        hashObject(filename);
+        Blob* blob = hashObject(filename);
+    std::cout<<"hash: "<<blob->hash<<"\n";
+    blob->writeObjectToDisk();
     }else if(subCommand == "cat-file"){
         if(argc < 3){
             std::cout << "Usage: " << argv[0] << " cat-file <object-hash>" << std::endl;
@@ -25,5 +31,17 @@ int main(int argc,char *argv[]){
         }
         std::string objectHash = argv[2];
         catFile(objectHash);
+    }
+    else if(subCommand == "add"){
+        if(argc < 3){
+            std::cout << "Usage: " << argv[0] << " add <filename>/<dirname> ..." << std::endl;
+            return 1;
+        }
+        std::vector<std::string> paths;
+        for(int i = 2;i < argc;i++){
+            std::string path(argv[i]);
+            paths.push_back(path);
+        }
+        add(paths);
     }
 }

@@ -1,11 +1,5 @@
-#ifndef ARK_HPP
-#define ARK_HPP
-
-#include <string>
-#include <filesystem>
-
-
-inline const std::string arkDir(){
+#include <ark.h>
+std::filesystem::path findRepoRoot() {
     std::filesystem::path current = std::filesystem::current_path();
 
     while (true) {
@@ -19,9 +13,5 @@ inline const std::string arkDir(){
             throw std::runtime_error("Not inside an Ark repository.");
         }
     }
-    static const std::string kArkDir = current / ".ark";
 }
-
-
-#endif
 
