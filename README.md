@@ -1,66 +1,123 @@
 # ark
 
-A tiny Git-like version control system I’m building in C++ to learn how Git works under the hood.  
+## this readme is currently being put together and can have issues.
 
-Right now it can:  
-- make a repo folder (`.ark`)  
-- turn a file into a blob object (with Git-style header + content)  
-- store it compressed by its hash  
-- read an object back by hash and print its contents  
+A tiny Git-like version control system I’m building in C++ to learn how Git works under the hood.
 
-It’s super minimal — just enough to play with the core ideas.  
+Right now it can:
+
+* Make a repository folder (`.ark`)
+* Turn a file into a blob object (with Git-style header + content)
+* Store it compressed by its hash
+* Read an object back by hash and print its contents
+* Add files to the repository (staging area)
+
+It’s minimal — just enough to explore the core ideas.
 
 ---
 
 ## Build
 
-You’ll need:  
-- C++17 compiler (clang/gcc)  
-- CMake >= 3.16  
-- OpenSSL (SHA-256)  
-- zlib (compression)  
+Requirements:
 
-On macOS:  
+* C++17 compiler (clang, gcc, or MSVC)
+* CMake >= 3.16
+* OpenSSL (for SHA-256)
+* zlib (for compression)
+
+### Linux / macOS
+
+Install dependencies via your package manager, for example:
 
 ```bash
+# macOS (Homebrew)
 brew install cmake openssl@3 zlib
+
+# Ubuntu/Debian
+sudo apt update
+sudo apt install cmake libssl-dev zlib1g-dev
 ```
 
-Build it:  
+Build using CMake:
 
 ```bash
-cmake -S . -B build -DCMAKE_PREFIX_PATH="$(brew --prefix openssl@3);$(brew --prefix zlib)"
-cmake --build build -j4
+cmake -S /path/to/ark -B /path/to/ark/build \
+      -DCMAKE_PREFIX_PATH="$(brew --prefix openssl@3);$(brew --prefix zlib)"
+cmake --build /path/to/ark/build -j4
 ```
 
-The binary will be at `build/ark`.  
+Or compile directly with g++:
+
+```bash
+# macOS
+g++ -std=c++17 -Iinclude -I$(brew --prefix openssl@3)/include \
+    src/main.cpp src/commands/*.cpp src/utils/compress.cpp \
+    -L$(brew --prefix openssl@3)/lib -lssl -lcrypto -lz -o build/ark
+
+# Linux
+ g++ -std=c++17 -Iinclude src/main.cpp src/commands/*.cpp src/utils/compress.cpp -lssl -lcrypto -lz -o build/ark
+```
+
+### Windows
+
+Install dependencies via vcpkg or manually:
+
+```powershell
+# Example with vcpkg
+vcpkg install openssl zlib
+```
+
+Build using CMake:
+
+```powershell
+cmake -S C:\path\to\ark -B C:\path\to\ark\build \
+      -DCMAKE_TOOLCHAIN_FILE=C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake
+cmake --build C:\path\to\ark\build --config Release
+```
+
+Or compile directly with g++:
+
+```powershell
+g++ -std=c++17 -Iinclude -I<openssl_include> -I<zlib_include> \
+    src/main.cpp src/commands/*.cpp src/utils/compress.cpp \
+    -L<openssl_lib> -L<zlib_lib> -lssl -lcrypto -lz -o build\ark.exe
+```
+
+The binary will be at `build/ark` (or `build\Release\ark.exe` on Windows).
 
 ---
 
 ## Usage
 
-Make a repo:  
+Initialize a repo:
 
 ```bash
 ./build/ark init
 ```
 
-Hash a file:  
+Hash a file:
 
 ```bash
 ./build/ark hash-object README.md
 ```
 
-Read an object back:  
+Add a file to the repository:
+
+```bash
+./build/ark add README.md
+```
+
+Read an object back:
 
 ```bash
 ./build/ark cat-file <hash>
 ```
 
-Quick demo:  
+Quick demo:
 
 ```bash
 ./build/ark init
+./build/ark add README.md
 HASH=$(./build/ark hash-object README.md | awk '/Object hashed:/ {print $3}')
 ./build/ark cat-file "$HASH"
 ```
@@ -69,10 +126,11 @@ HASH=$(./build/ark hash-object README.md | awk '/Object hashed:/ {print $3}')
 
 ## How it works
 
-- A blob object looks like: `blob <size>\0<file content>`  
-- I hash this with SHA-256  
-- Store it compressed under `.ark/objects/<first-2-chars>/<rest>`  
-- `cat-file` reverses it and prints the content  
+* A blob object is: `blob <size>\0<file content>`
+* It’s hashed with SHA-256
+* Stored compressed under `.ark/objects/<first-2-chars>/<rest>`
+* `cat-file` decompresses and prints the content
+* `add` updates the staging area with file references
 
 ---
 
@@ -80,9 +138,10 @@ HASH=$(./build/ark hash-object README.md | awk '/Object hashed:/ {print $3}')
 
 ```
 src/main.cpp                 -> CLI entry
-src/commands/init.cpp        -> makes .ark
+src/commands/init.cpp        -> creates .ark
 src/commands/hash-object.cpp -> stores blobs
 src/commands/cat-file.cpp    -> reads blobs
+src/commands/add.cpp         -> stages files for commit
 src/utils/compress.cpp       -> zlib helper
 include/                     -> headers
 ```
