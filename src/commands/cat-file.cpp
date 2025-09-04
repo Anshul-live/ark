@@ -2,11 +2,12 @@
 #include <fstream>
 #include <sstream>
 #include <filesystem>
+#include <ark.h>
 #include <cat-file.h>
 #include <compress.h>
 
 void catFile(const std::string& objectHash){
-    std::string arkPath = ".ark";
+    std::string arkPath = arkDir();
     if(objectHash.size() < 3){
         std::cerr << "Error: invalid object hash" << std::endl;
         return;
@@ -25,7 +26,7 @@ void catFile(const std::string& objectHash){
     buffer << in.rdbuf();
     std::string compressed = buffer.str();
 
-    std::string data = decompressBuffer(compressed);
+    std::string data = decompressObject(compressed);
     if(data.empty()){
         std::cerr << "Error: failed to decompress object" << std::endl;
         return;
