@@ -2,7 +2,8 @@
 #define HASH_OBJECT_HPP
 
 #include <string>
+#include <objects.h>
 
-void hashObject(const std::string& filename);
+Blob* hashObject(const std::string& filename);
 
 #endif
