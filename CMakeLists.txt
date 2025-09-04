@@ -11,6 +11,7 @@ add_executable(ark
     src/commands/hash-object.cpp
     src/commands/cat-file.cpp
     src/utils/compress.cpp
+    src/utils/objects.cpp
 )
 
 target_include_directories(ark PUBLIC ${CMAKE_SOURCE_DIR}/include)

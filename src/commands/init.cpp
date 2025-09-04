@@ -1,11 +1,12 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <ark.h>
 #include <init.h>
 
 void init(){
     std::cout << "initialising ark" << std::endl;
-    std::string arkPath = ".ark";
+    std::string arkPath = arkDir();
     if(std::filesystem::exists(arkPath)){
         std::cout << "ark already initialised" << std::endl;
         return;
