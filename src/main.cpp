@@ -22,8 +22,7 @@ int main(int argc,char *argv[]){
         }
         std::string filename = argv[2];
         Blob* blob = hashObject(filename);
-    std::cout<<"hash: "<<blob->hash<<"\n";
-    blob->writeObjectToDisk();
+        std::cout<<blob->hash<<"\n";
     }else if(subCommand == "cat-file"){
         if(argc < 3){
             std::cout << "Usage: " << argv[0] << " cat-file <object-hash>" << std::endl;
