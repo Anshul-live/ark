@@ -3,8 +3,8 @@
 
 #include <string>
 
-std::string compressBuffer(const std::string& input);
-std::string decompressBuffer(const std::string& input);
+std::string compressObject(const std::string& input);
+std::string decompressObject(const std::string& input);
 
 #endif
 

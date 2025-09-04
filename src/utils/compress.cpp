@@ -2,7 +2,7 @@
 #include <zlib.h>
 #include <iostream>
 
-std::string compressBuffer(const std::string& input) {
+std::string compressObject(const std::string& input) {
     if (input.empty()) return std::string();
     uLongf destinationCapacity = compressBound(static_cast<uLong>(input.size()));
     std::string compressed;
@@ -22,7 +22,7 @@ std::string compressBuffer(const std::string& input) {
     return compressed;
 }
 
-std::string decompressBuffer(const std::string& input) {
+std::string decompressObject(const std::string& input) {
     if (input.empty()) return std::string();
 
     // Start with a buffer that's 4x the input size and grow as needed
