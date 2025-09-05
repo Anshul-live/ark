@@ -1,16 +1,16 @@
 # ark
 
-## this readme is currently being put together and can have issues.
+## this readme is currently being put together by me and might not have the latest info.
 
-A tiny Git-like version control system I’m building in C++ to learn how Git works under the hood.
+A tiny Git-like version control system (echo 'content addressable database' > /dev/null ) I’m building in C++ to learn how Git works under the hood.
 
 Right now it can:
 
 * Make a repository folder (`.ark`)
 * Turn a file into a blob object (with Git-style header + content)
-* Store it compressed by its hash
-* Read an object back by hash and print its contents
-* Add files to the repository (staging area)
+* Stage files to index
+* Create Tree from the index
+* Commit the changes (not complete)
 
 It’s minimal — just enough to explore the core ideas.
 
@@ -51,11 +51,11 @@ Or compile directly with g++:
 ```bash
 # macOS
 g++ -std=c++17 -Iinclude -I$(brew --prefix openssl@3)/include \
-    src/main.cpp src/commands/*.cpp src/utils/compress.cpp \
+    src/main.cpp src/commands/*.cpp src/utils/*.cpp \
     -L$(brew --prefix openssl@3)/lib -lssl -lcrypto -lz -o build/ark
 
 # Linux
- g++ -std=c++17 -Iinclude src/main.cpp src/commands/*.cpp src/utils/compress.cpp -lssl -lcrypto -lz -o build/ark
+ g++ -std=c++17 -Iinclude src/main.cpp src/commands/*.cpp src/utils/*.cpp -lssl -lcrypto -lz -o build/ark
 ```
 
 ### Windows
@@ -79,7 +79,7 @@ Or compile directly with g++:
 
 ```powershell
 g++ -std=c++17 -Iinclude -I<openssl_include> -I<zlib_include> \
-    src/main.cpp src/commands/*.cpp src/utils/compress.cpp \
+    src/main.cpp src/commands/*.cpp src/utils/*.cpp \
     -L<openssl_lib> -L<zlib_lib> -lssl -lcrypto -lz -o build\ark.exe
 ```
 
@@ -126,24 +126,28 @@ HASH=$(./build/ark hash-object README.md)
 
 ## How it works
 
-* A blob object is: `blob <size>\0<file content>`
-* It’s hashed with SHA-256
-* Stored compressed under `.ark/objects/<first-2-chars>/<rest>`
+* `init` initialises the repo
+* `hash-object` hashes a file to its SHA-256 hash
 * `cat-file` decompresses and prints the content
 * `add` updates the staging area with file references
+* `commit` creates tree from index and writes the tree to objects folder
 
 ---
 
 ## Project layout
 
 ```
-src/main.cpp                 -> CLI entry
+src/main.cpp                 -> entry point
 src/commands/init.cpp        -> creates .ark
-src/commands/hash-object.cpp -> stores blobs
-src/commands/cat-file.cpp    -> reads blobs
+src/commands/hash-object.cpp -> creates blobs
+src/commands/cat-file.cpp    -> converts compressed files to original data
 src/commands/add.cpp         -> stages files for commit
+src/commands/commit.cpp      -> commits the changes from staging area / index
 src/utils/compress.cpp       -> zlib helper
+src/utils/ark.cpp            -> helper methods for ark project
+src/utils/objects.cpp        -> contains definitions of each object(blob,tree,commit)
 include/                     -> headers
+build/                       -> for storing build files generated during building process
 ```
 
 ---
