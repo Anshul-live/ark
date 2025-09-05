@@ -6,6 +6,7 @@
 #include <hash-object.h>
 #include <cat-file.h>
 #include <add.h>
+#include <commit.h>
 
 int main(int argc,char *argv[]){
     if(argc < 2){
@@ -42,5 +43,8 @@ int main(int argc,char *argv[]){
             paths.push_back(path);
         }
         add(paths);
+    }
+    else if(subCommand == "commit"){
+      commit();
     }
 }
