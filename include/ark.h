@@ -4,7 +4,6 @@
 #include <string>
 #include <filesystem>
 
-
 inline const std::string arkDir(){
     std::filesystem::path current = std::filesystem::current_path();
 
@@ -13,12 +12,13 @@ inline const std::string arkDir(){
             return current; // found repo root
         }
 
-        if (current.has_parent_path()) {
+        if (current.has_parent_path() && current.string() != "/") {
             current = current.parent_path();
         } else {
             throw std::runtime_error("Not inside an Ark repository.");
         }
     }
+    std::cout<<"found root repo\n";
     static const std::string kArkDir = current / ".ark";
 }
 
