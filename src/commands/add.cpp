@@ -6,17 +6,15 @@
 #include <unordered_map>
 #include <hash-object.h>
 
-void add(const std::vector<std::string>& paths) {
+void add(std::vector<std::string>& paths) {
     std::filesystem::path repo_root = arkDir();               // repo root
     std::filesystem::path index_path = repo_root / ".ark" / "index";   // .ark/index
 
     std::unordered_map<std::string, std::string> index;
 
-    for (const auto& path : paths) {
-        if (path == ".") {
-            // optional: add all files recursively later
-            continue;
-        }
+    for (int i = 0;i < paths.size();i++) {
+        std::cout<<paths[i]<<"<--- raw path\n";
+        std::filesystem::path path = std::filesystem::absolute(paths[i]);
 
         if (!std::filesystem::exists(path)) {
             std::cerr << path << " does not exist.\n";
@@ -24,6 +22,7 @@ void add(const std::vector<std::string>& paths) {
         }
 
         if (std::filesystem::is_regular_file(path)) {
+            std::cout<<"processing file: "<<path<<"\n";
             if (index.find(path) != index.end())
                 continue;
 
@@ -31,6 +30,15 @@ void add(const std::vector<std::string>& paths) {
             index[path] = blob->hash;
             blob->writeObjectToDisk();
         }
+        else if(std::filesystem::is_directory(path)){
+          std::cout<<"processing dir -> "<<path<<std::endl;
+            for (const auto& entry : std::filesystem::directory_iterator(path)) {
+                std::string temp_path = entry.path().string();
+                std::cout<<"new entry-> "<<temp_path<<std::endl;
+                paths.push_back(temp_path);
+            }
+        }
+        
     }
 
     // Write index
