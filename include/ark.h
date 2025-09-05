@@ -4,6 +4,22 @@
 #include <string>
 #include <filesystem>
 
+std::string getMode(const std::filesystem::path& path);
+
+std::string getEditor();
+
+void openEditor(const std::string& editor, const std::string& file);
+
+std::string createTempFile();
+
+std::string getCommitMessageFromEditor();
+
+std::string readFileContent(const std::string& file);
+
+std::unordered_map<std::string,std::string> loadConfig();
+
+
+
 inline const std::string arkDir(){
     std::filesystem::path current = std::filesystem::current_path();
 
@@ -18,7 +34,6 @@ inline const std::string arkDir(){
             throw std::runtime_error("Not inside an Ark repository.");
         }
     }
-    std::cout<<"found root repo\n";
     static const std::string kArkDir = current / ".ark";
 }
 

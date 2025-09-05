@@ -5,15 +5,17 @@
 #include <objects.h>
 #include <unordered_map>
 #include <hash-object.h>
+#include <sstream>
+#include <fstream>
+#include <sys/stat.h>
 
 void add(std::vector<std::string>& paths) {
-    std::filesystem::path repo_root = arkDir();               // repo root
-    std::filesystem::path index_path = repo_root / ".ark" / "index";   // .ark/index
+    std::filesystem::path repo_root = arkDir();                     // repo root
+    std::filesystem::path index_path = repo_root / ".ark" / "index"; // .ark/index
 
-    std::unordered_map<std::string, std::string> index;
+    std::unordered_map<std::string, std::pair<std::string,std::string>> index; // path -> (hash, mode)
 
-    for (int i = 0;i < paths.size();i++) {
-        std::cout<<paths[i]<<"<--- raw path\n";
+    for (int i = 0; i < paths.size(); i++) {
         std::filesystem::path path = std::filesystem::absolute(paths[i]);
 
         if (!std::filesystem::exists(path)) {
@@ -22,30 +24,31 @@ void add(std::vector<std::string>& paths) {
         }
 
         if (std::filesystem::is_regular_file(path)) {
-            std::cout<<"processing file: "<<path<<"\n";
-            if (index.find(path) != index.end())
+            if (index.find(path.string()) != index.end())
                 continue;
 
             Blob* blob = hashObject(path);
-            index[path] = blob->hash;
+            std::string mode = getMode(path);
+            index[path.string()] = { blob->hash, mode };
             blob->writeObjectToDisk();
         }
-        else if(std::filesystem::is_directory(path)){
-          std::cout<<"processing dir -> "<<path<<std::endl;
+        else if (std::filesystem::is_directory(path)) {
             for (const auto& entry : std::filesystem::directory_iterator(path)) {
-                std::string temp_path = entry.path().string();
-                std::cout<<"new entry-> "<<temp_path<<std::endl;
-                paths.push_back(temp_path);
+                paths.push_back(entry.path().string());
             }
         }
-        
     }
 
     // Write index
     std::ostringstream index_stream;
     for (auto& entry : index) {
         std::string relative_path = std::filesystem::relative(entry.first, repo_root).string();
-        index_stream << entry.second << " " << relative_path << "\n";
+        index_stream << entry.second.second // mode
+                     << " "
+                     << entry.second.first  // hash
+                     << " "
+                     << relative_path
+                     << "\n";
     }
 
     std::ofstream out_file(index_path, std::ios::binary);
@@ -53,7 +56,9 @@ void add(std::vector<std::string>& paths) {
         std::cerr << "Failed to open index file for writing.\n";
         return;
     }
-    std::cout<<index_stream.str();
+
+    std::cout << index_stream.str();
     out_file << index_stream.str();
     out_file.close();
 }
+

@@ -5,6 +5,7 @@
 #include <init.h>
 
 void init(){
+
     std::string ark_path = ".ark";
     if(std::filesystem::exists(ark_path)){
         std::cout << "ark already initialised" << std::endl;
@@ -16,4 +17,5 @@ void init(){
     std::filesystem::create_directory(ark_path + "/objects");
     std::filesystem::create_directory(ark_path + "/refs");
     std::ofstream(ark_path + "/HEAD") << "ref: refs/heads/main";
+  loadConfig();
 }
