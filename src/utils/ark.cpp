@@ -6,6 +6,82 @@
 #include <iostream>
 #include <cstdlib>
 #include <unordered_map>
+#include <unordered_set>
+
+std::string normalizePath(const std::string& p) {
+    return std::filesystem::path(p).lexically_normal().generic_string();
+}
+
+std::string trim(const std::string& s) {
+    size_t start = s.find_first_not_of(" \t\r\n");
+    if (start == std::string::npos)
+        return ""; // all whitespace
+
+    size_t end = s.find_last_not_of(" \t\r\n");
+    return s.substr(start, end - start + 1);
+}
+
+std::unordered_set<std::string> loadIgnoreFiles(){
+  std::string repo_root = arkDir();
+  std::vector<std::string> paths;
+  paths.push_back(repo_root);
+  std::unordered_set<std::string> ignored_patterns;
+  for(int i = 0;i < paths.size();i++){
+    std::string path = paths[i];
+    std::unordered_set<std::string> temp = loadIgnoreFile(path);
+    ignored_patterns.insert(temp.begin(),temp.end());
+    for(const auto& entry:std::filesystem::directory_iterator(path)){
+      if( std::filesystem::is_directory(entry)){
+          paths.push_back(entry.path().string());
+      }
+    }
+  }
+    return ignored_patterns;
+}
+
+std::unordered_set<std::string> loadIgnoreFile(const std::string& path) {
+    std::unordered_set<std::string> patterns;
+
+    std::string file = path + "/.arkignore";
+    if (!(std::filesystem::exists(file) && std::filesystem::is_regular_file(file)))
+        return patterns;
+
+    std::cout<<"loaded "<<file<<"\n";
+
+    std::ifstream in(file);
+    if (!in) {
+        std::cerr << "error reading file " << file << "\n";
+        return patterns;
+    }
+
+    std::string line;
+    while (getline(in, line)) {
+        line = trim(line);
+        if (line.empty() || line[0] == '#')
+            continue;
+
+        patterns.insert(normalizePath(path+"/"+line));
+    }
+
+    return patterns;
+}
+
+bool isIgnored(const std::string& path,const std::unordered_set<std::string>& ignored_patterns){
+   for (const auto& pattern : ignored_patterns) {
+        if (path == pattern) {
+            return true;
+        }
+
+        if (!pattern.empty() && pattern.back() == '/') {
+            if (path.rfind(pattern, 0) == 0) { 
+                return true;
+            }
+        }
+  }
+  return false;
+}
+
+
 
 std::vector<std::string> split(const std::string& s, char delimiter) {
     std::vector<std::string> tokens;
@@ -77,9 +153,12 @@ std::string getMode(const std::filesystem::path& path) {
 }
 
 std::unordered_map<std::string,std::string> loadConfig(){
+  //TODO: finish this please
   std::string repo_root = arkDir();
+  std::unordered_map<std::string,std::string> config;
   std::string local_config_file = repo_root + "/.ark/config";
   std::cout<<local_config_file<<"\n";
+  return config;
 }
 
 

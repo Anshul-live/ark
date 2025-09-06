@@ -12,11 +12,16 @@
 void add(std::vector<std::string>& paths) {
     std::filesystem::path repo_root = arkDir();                     // repo root
     std::filesystem::path index_path = repo_root / ".ark" / "index"; // .ark/index
-
+    std::unordered_set<std::string> ignored_patterns = loadIgnoreFiles();
     std::unordered_map<std::string, std::pair<std::string,std::string>> index; // path -> (hash, mode)
-
     for (int i = 0; i < paths.size(); i++) {
         std::filesystem::path path = std::filesystem::absolute(paths[i]);
+        std::string generic_path = normalizePath(path);
+
+        if(isIgnored(generic_path,ignored_patterns)){
+            std::cout<<"ignoring "<<generic_path<<"\n";
+        }
+        
 
         if (!std::filesystem::exists(path)) {
             std::cerr << path << " does not exist.\n";
@@ -33,6 +38,10 @@ void add(std::vector<std::string>& paths) {
             blob->writeObjectToDisk();
         }
         else if (std::filesystem::is_directory(path)) {
+          if(isIgnored(generic_path+"/",ignored_patterns)){
+            std::cout<<"ignoring "<<generic_path+"/"<<"\n";
+            continue;
+          }
             for (const auto& entry : std::filesystem::directory_iterator(path)) {
                 paths.push_back(entry.path().string());
             }
@@ -56,8 +65,6 @@ void add(std::vector<std::string>& paths) {
         std::cerr << "Failed to open index file for writing.\n";
         return;
     }
-
-    std::cout << index_stream.str();
     out_file << index_stream.str();
     out_file.close();
 }

@@ -6,6 +6,17 @@
 #include <string>
 #include <filesystem>
 #include <sstream>
+#include <unordered_set>
+
+std::unordered_set<std::string> loadIgnoreFile(const std::string& path);
+
+std::unordered_set<std::string> loadIgnoreFiles();
+
+std::string normalizePath(const std::string& p);
+
+bool isIgnored(const std::string& pattern,const std::unordered_set<std::string>& ignored_patterns);
+
+std::string trim(const std::string& s);
 
 std::vector<std::string> split(const std::string& s, char delimiter);
 
