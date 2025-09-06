@@ -6,6 +6,4 @@
 std::string getHead();
 void setHead(const std::string& commit_hash);
 
-
-
 #endif // !HEAD_HPP
