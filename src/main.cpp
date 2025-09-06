@@ -10,8 +10,10 @@
 #include <branch.h>
 #include <switch.h>
 #include <log.h>
+#include <ark.h>
 
 int main(int argc,char *argv[]){
+    
     if(argc < 2){
         std::cout << "Usage: " << argv[0] << " <sub-command>" << std::endl;
         return 1;
