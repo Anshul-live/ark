@@ -7,14 +7,19 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(ark
     src/main.cpp
+
     src/commands/init.cpp
     src/commands/hash-object.cpp
     src/commands/cat-file.cpp
+    src/commands/add.cpp
+    src/commands/commit.cpp
+    src/commands/branch.cpp
+    src/commands/switch.cpp
+
     src/utils/compress.cpp
     src/utils/objects.cpp
     src/utils/ark.cpp
-    src/commands/add.cpp
-    src/commands/commit.cpp
+    src/utils/head.cpp
 )
 
 target_include_directories(ark PUBLIC ${CMAKE_SOURCE_DIR}/include)
