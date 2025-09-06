@@ -114,7 +114,7 @@ Blob::Blob(const std::string& filename) {
         this->hash = this->getSha256();
 }
 
-Tree::Tree(const std::string& filename) {
+Tree::Tree() {
   std::unordered_map<std::string,std::pair<std::string,std::string>> blobs = loadIndex();
 
         root = new TreeNode();
@@ -197,7 +197,7 @@ void Tree::writeTreeToDisk(TreeNode* root) {
 Commit::Commit(const std::string& message,const std::string& parent_hash){
       std::string ark_path = arkDir();
       std::string index_file_path = ark_path + "/.ark/index";
-      Tree * t = new Tree(index_file_path);
+      Tree * t = new Tree();
       t->writeTreeToDisk(t->root);
 
       // TODO: Implement properly
@@ -205,6 +205,29 @@ Commit::Commit(const std::string& message,const std::string& parent_hash){
       std::ostringstream buffer;
       buffer << "tree "<< t->root->hash << "\n";
       buffer << "parent "<<parent_hash<<"\n";
+      buffer << "author "<<"\n";
+      buffer << "committer"<<"\n\n";
+
+      buffer<<message<<"\n";
+      std::string raw_content = buffer.str();
+      this->content = "commit "+std::to_string(raw_content.size()) + std::string("\0",1)+raw_content;
+      this->hash = this->getSha256();
+      std::ofstream out(index_file_path);
+      out.close();
+}
+
+Commit::Commit(const std::string& message,const std::string& parent1_hash,const std::string& parent2_hash){
+      std::string ark_path = arkDir();
+      std::string index_file_path = ark_path + "/.ark/index";
+      Tree * t = new Tree();
+      t->writeTreeToDisk(t->root);
+
+      // TODO: Implement properly
+
+      std::ostringstream buffer;
+      buffer << "tree "<< t->root->hash << "\n";
+      buffer << "parent "<<parent1_hash<<"\n";
+      buffer << "parent "<<parent2_hash<<"\n";
       buffer << "author "<<"\n";
       buffer << "committer"<<"\n\n";
 

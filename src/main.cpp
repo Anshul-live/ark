@@ -11,6 +11,9 @@
 #include <switch.h>
 #include <log.h>
 #include <status.h>
+#include <write-tree.h>
+#include <commit-tree.h>
+#include <update-ref.h>
 
 int main(int argc,char *argv[]){
     
@@ -33,9 +36,38 @@ int main(int argc,char *argv[]){
         if(argc < 3){
             std::cout << "Usage: " << argv[0] << " cat-file <object-hash>" << std::endl;
             return 1;
-        }
-        std::string objectHash = argv[2];
+        } std::string objectHash = argv[2];
         std::cout<<catFile(objectHash);
+    }
+    else if(subCommand == "write-tree"){
+      std::cout<<writeTree()->root->hash;
+    }
+    else if(subCommand == "commit-tree"){
+        if(argc < 3){
+            std::cout << "Usage: " << argv[0] << " commit-tree <tree-hash> [<parent1-hash>] [<parent2-hash>]" << std::endl;
+            return 1;
+        }
+        std::string parent1_hash = argc > 3 ? argv[3] : "";
+        std::string parent2_hash = argc > 4 ? argv[4] : "";
+        std::string message = argc > 5 ? argv[5] : "";
+        std::cout<<commitTree(argv[2],parent1_hash,parent2_hash,message);
+    }
+   else if(subCommand == "commit-tree"){
+        if(argc < 3){
+            std::cout << "Usage: " << argv[0] << " commit-tree <tree-hash> [<parent1-hash>] [<parent2-hash>]" << std::endl;
+            return 1;
+        }
+        std::string parent1_hash = argc > 3 ? argv[3] : "";
+        std::string parent2_hash = argc > 4 ? argv[4] : "";
+        std::string message = argc > 5 ? argv[5] : "";
+        std::cout<<commitTree(argv[2],parent1_hash,parent2_hash,message);
+    } 
+    else if(subCommand == "update-ref"){
+        if(argc < 4){
+            std::cout << "Usage: " << argv[0] << " update-ref <ref-path> <commit-hash>" << std::endl;
+            return 1;
+        }
+        updateRef(argv[2],argv[3]);
     }
     else if(subCommand == "add"){
         if(argc < 3){

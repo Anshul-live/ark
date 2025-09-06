@@ -45,10 +45,9 @@ public:
 // ---------- Tree ----------
 class Tree {
 public:
-  Tree() = default;
     TreeNode* root;
 
-    Tree(const std::string& filename);
+    Tree();
 
  void insertBlob(TreeNode* root,
                 const std::vector<std::string>& path,
@@ -65,6 +64,7 @@ class Commit:public Object{
   public:
     Commit() = default;
     Commit(const std::string& message,const std::string& parent_hash);
+    Commit(const std::string& message,const std::string& parent1_hash,const std::string& parent2_hash);
 };
 // ---------- Object base ----------
 

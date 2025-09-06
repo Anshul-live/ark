@@ -11,12 +11,15 @@ add_executable(ark
     src/commands/init.cpp
     src/commands/hash-object.cpp
     src/commands/cat-file.cpp
+    src/commands/write-tree.cpp
+    src/commands/commit-tree.cpp
     src/commands/add.cpp
     src/commands/commit.cpp
     src/commands/branch.cpp
     src/commands/switch.cpp
     src/commands/log.cpp
     src/commands/status.cpp
+    src/commands/update-ref.cpp
 
     src/utils/compress.cpp
     src/utils/objects.cpp
