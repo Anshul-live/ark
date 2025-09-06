@@ -7,6 +7,8 @@
 #include <cat-file.h>
 #include <add.h>
 #include <commit.h>
+#include <branch.h>
+#include <switch.h>
 
 int main(int argc,char *argv[]){
     if(argc < 2){
@@ -43,6 +45,20 @@ int main(int argc,char *argv[]){
             paths.push_back(path);
         }
         add(paths);
+    }
+    else if(subCommand == "branch"){
+        if(argc < 3){
+            printBranches();
+            return 1;
+        }
+        branch(argv[2]);
+    }
+    else if(subCommand == "switch"){
+        if(argc < 3){
+            std::cout << "Usage: " << argv[0] << " add <filename>/<dirname> ..." << std::endl;
+            return 1;
+        }
+        switchBranch(argv[2]);
     }
     else if(subCommand == "commit"){
       commit();

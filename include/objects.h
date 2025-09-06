@@ -158,7 +158,7 @@ void writeTreeToDisk(TreeNode* root) {
 
 class Commit:public Object{
   public:
-    Commit(std::string message){
+    Commit(const std::string& message,const std::string& parent_hash){
       std::string ark_path = arkDir();
       std::string index_file_path = ark_path + "/.ark/index";
       Tree * t = new Tree(index_file_path);
@@ -168,7 +168,7 @@ class Commit:public Object{
 
       std::ostringstream buffer;
       buffer << "tree "<< t->root->hash << "\n";
-      buffer << "parent "<<"\n";
+      buffer << "parent "<<parent_hash<<"\n";
       buffer << "author "<<"\n";
       buffer << "committer"<<"\n\n";
 
