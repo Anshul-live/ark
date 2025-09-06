@@ -2,10 +2,12 @@
 #include <objects.h>
 #include <filesystem>
 #include <ark.h>
+#include <head.h>
 
 void commit(){
   std::string message = getCommitMessageFromEditor();
-  Commit *commit = new Commit(message);
+  std::string parent_commit_hash = getHead();
+  Commit *commit = new Commit(message,parent_commit_hash);
   commit->writeObjectToDisk();
-  std::cout<<commit->hash<<"\n";
+  setHead(commit->hash);
 }
