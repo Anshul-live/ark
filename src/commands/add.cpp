@@ -19,7 +19,7 @@ void add(std::vector<std::string>& paths) {
         std::string generic_path = normalizePath(path);
 
         if(isIgnored(generic_path,ignored_patterns)){
-            std::cout<<"ignoring "<<generic_path<<"\n";
+            continue;
         }
         
 
@@ -39,7 +39,6 @@ void add(std::vector<std::string>& paths) {
         }
         else if (std::filesystem::is_directory(path)) {
           if(isIgnored(generic_path+"/",ignored_patterns)){
-            std::cout<<"ignoring "<<generic_path+"/"<<"\n";
             continue;
           }
             for (const auto& entry : std::filesystem::directory_iterator(path)) {
@@ -49,8 +48,15 @@ void add(std::vector<std::string>& paths) {
     }
 
     // Write index
+    std::unordered_map<std::string,std::pair<std::string,std::string>> loaded_index = loadIndex();
+
+    for (auto& [name,obj] : index) {
+      loaded_index[name] = obj;
+    }
+
+
     std::ostringstream index_stream;
-    for (auto& entry : index) {
+    for (auto& entry : loaded_index) {
         std::string relative_path = std::filesystem::relative(entry.first, repo_root).string();
         index_stream << entry.second.second // mode
                      << " "

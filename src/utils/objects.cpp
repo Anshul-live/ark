@@ -9,6 +9,92 @@
 #include <ark.h>
 #include <compress.h>
 #include <objects.h>
+#include <hash-object.h>
+
+std::unordered_map<std::string,Blob*> loadIndexAsBlobs(){
+  //TODO: implement me
+
+}
+
+std::unordered_map<std::string,std::pair<std::string,std::string>> loadIndex(){
+  std::string filename = arkDir() + "/.ark/index";
+  std::cout<<filename<<"\n";
+      std::ifstream in(filename, std::ios::binary);
+        if (!in) {
+            std::cerr << "provided index file does not exist or can't be opened";
+            return {};
+        }
+
+        std::unordered_map<std::string, std::pair<std::string, std::string>> blobs;
+        std::string mode, hash, name;
+
+        while (in >> mode >> hash >> name) {
+            blobs[name] = {hash, mode};
+        }
+        return blobs;
+}
+
+std::unordered_map<std::string,Blob*> loadWorkingDirectoryWithoutIgnored(){
+    std::filesystem::path repo_root = arkDir();                     // repo root
+    std::unordered_set<std::string> ignored_patterns = loadIgnoreFiles();
+    std::unordered_map<std::string,Blob*> blobs;
+    std::vector<std::string> paths;
+    paths.push_back(repo_root);
+    for (int i = 0; i < paths.size(); i++) {
+        std::filesystem::path path = std::filesystem::absolute(paths[i]);
+        std::string generic_path = normalizePath(path);
+
+        if(isIgnored(generic_path,ignored_patterns)){
+            continue;
+        }
+
+        if (!std::filesystem::exists(path)) {
+            std::cerr << path << " does not exist.\n";
+            continue;
+        }
+
+        if (std::filesystem::is_regular_file(path)) {
+            Blob* blob = hashObject(path);
+            std::string mode = getMode(path);
+            blobs[std::filesystem::relative(path,repo_root).string()] = blob;
+        }
+        else if (std::filesystem::is_directory(path)) {
+          if(isIgnored(generic_path+"/",ignored_patterns)){
+            continue;
+          }
+            for (const auto& entry : std::filesystem::directory_iterator(path)) {
+                paths.push_back(entry.path().string());
+            }
+        }
+    }
+    return blobs;
+}
+
+
+std::unordered_map<std::string,Blob*> loadWorkingDirectory() {
+    std::filesystem::path repo_root = arkDir();                     
+    std::vector<std::string> paths;
+    paths.push_back(repo_root);
+    std::unordered_map<std::string,Blob*> blobs;
+
+    for (int i = 0; i < paths.size(); i++) {
+        std::string path = paths[i];
+        path = std::filesystem::relative(path,repo_root);
+        if (std::filesystem::is_regular_file(path)) {
+            Blob* blob = hashObject(path);
+            std::string mode = getMode(path);
+            blobs[path] = blob;
+        }
+        else if (std::filesystem::is_directory(path)) {
+          if(path == ".ark")
+            continue;
+            for (const auto& entry : std::filesystem::directory_iterator(path)) {
+                paths.push_back(entry.path().string());
+            }
+        }
+    }
+    return blobs;
+}
 
 
 Blob::Blob(const std::string& filename) {
@@ -29,19 +115,7 @@ Blob::Blob(const std::string& filename) {
 }
 
 Tree::Tree(const std::string& filename) {
-        std::ifstream in(filename, std::ios::binary);
-        if (!in) {
-            std::cerr << "provided index file does not exist or can't be opened";
-            root = nullptr;
-            return;
-        }
-
-        std::unordered_map<std::string, std::pair<std::string, std::string>> blobs;
-        std::string mode, hash, name;
-
-        while (in >> mode >> hash >> name) {
-            blobs[name] = {hash, mode};
-        }
+  std::unordered_map<std::string,std::pair<std::string,std::string>> blobs = loadIndex();
 
         root = new TreeNode();
 
@@ -138,6 +212,19 @@ Commit::Commit(const std::string& message,const std::string& parent_hash){
       std::string raw_content = buffer.str();
       this->content = "commit "+std::to_string(raw_content.size()) + std::string("\0",1)+raw_content;
       this->hash = this->getSha256();
+      std::ofstream out(index_file_path);
+      out.close();
+}
+
+bool Object::isWrittenToDisk(){
+  std::string repo_root = arkDir();
+  std::string object_dir = repo_root+"/.ark/objects/"+this->hash.substr(0,2)+"/";
+  if(!std::filesystem::exists(object_dir))
+    return false;
+  if(!std::filesystem::exists(object_dir+this->hash.substr(2)))
+    return false;
+
+  return true;
 }
 
 
@@ -155,7 +242,7 @@ std::string Object::getSha256(){
     }
     return hexStream.str();
     }
-    void Object::writeObjectToDisk(){
+void Object::writeObjectToDisk(){
         std::string arkPath = arkDir() + "/.ark";
         std::string dirName = arkPath + "/objects/" + hash.substr(0, 2);
         std::string fileName = dirName + "/" + hash.substr(2);
