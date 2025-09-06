@@ -15,6 +15,7 @@ add_executable(ark
     src/commands/commit.cpp
     src/commands/branch.cpp
     src/commands/switch.cpp
+    src/commands/log.cpp
 
     src/utils/compress.cpp
     src/utils/objects.cpp

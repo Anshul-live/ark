@@ -9,6 +9,7 @@
 #include <commit.h>
 #include <branch.h>
 #include <switch.h>
+#include <log.h>
 
 int main(int argc,char *argv[]){
     if(argc < 2){
@@ -32,7 +33,7 @@ int main(int argc,char *argv[]){
             return 1;
         }
         std::string objectHash = argv[2];
-        catFile(objectHash);
+        std::cout<<catFile(objectHash);
     }
     else if(subCommand == "add"){
         if(argc < 3){
@@ -59,6 +60,9 @@ int main(int argc,char *argv[]){
             return 1;
         }
         switchBranch(argv[2]);
+    }
+    else if(subCommand == "log"){
+      log();
     }
     else if(subCommand == "commit"){
       commit();

@@ -3,7 +3,7 @@
 
 #include <string>
 
-void catFile(const std::string& object_hash);
+std::string catFile(const std::string& object_hash);
 
 #endif
 

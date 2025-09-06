@@ -7,6 +7,17 @@
 #include <cstdlib>
 #include <unordered_map>
 
+std::vector<std::string> split(const std::string& s, char delimiter) {
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(s);
+
+    while (std::getline(tokenStream, token, delimiter)) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
 std::string getEditor() {
     const char* editor = std::getenv("GIT_EDITOR");
     if (!editor) editor = std::getenv("VISUAL");
@@ -70,3 +81,5 @@ std::unordered_map<std::string,std::string> loadConfig(){
   std::string local_config_file = repo_root + "/.ark/config";
   std::cout<<local_config_file<<"\n";
 }
+
+
