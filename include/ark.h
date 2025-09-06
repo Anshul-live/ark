@@ -1,8 +1,14 @@
 #ifndef ARK_HPP
 #define ARK_HPP
 
+#define NULL_HASH "0000000000000000000000000000000000000000000000000000000000000000"
+
 #include <string>
 #include <filesystem>
+#include <sstream>
+
+std::vector<std::string> split(const std::string& s, char delimiter);
+
 
 std::string getMode(const std::filesystem::path& path);
 
