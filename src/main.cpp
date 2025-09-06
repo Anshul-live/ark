@@ -10,7 +10,7 @@
 #include <branch.h>
 #include <switch.h>
 #include <log.h>
-#include <ark.h>
+#include <status.h>
 
 int main(int argc,char *argv[]){
     
@@ -62,6 +62,9 @@ int main(int argc,char *argv[]){
             return 1;
         }
         switchBranch(argv[2]);
+    }
+    else if(subCommand == "status"){
+      status();
     }
     else if(subCommand == "log"){
       log();

@@ -19,5 +19,6 @@ void init(){
     std::filesystem::create_directory(ark_path + "/refs/heads");
     std::ofstream(ark_path + "/refs/heads/main") << NULL_HASH;
     std::ofstream(ark_path + "/HEAD") << "ref: refs/heads/main";
+    std::ofstream(ark_path + "/index");
   loadConfig();
 }

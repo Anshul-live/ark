@@ -21,6 +21,23 @@ std::string trim(const std::string& s) {
     return s.substr(start, end - start + 1);
 }
 
+std::string arkDir(){
+    std::filesystem::path current = std::filesystem::current_path();
+
+    while (true) {
+        if (std::filesystem::exists(current / ".ark") && std::filesystem::is_directory(current / ".ark")) {
+            return current; // found repo root
+        }
+
+        if (current.has_parent_path() && current.string() != "/") {
+            current = current.parent_path();
+        } else {
+            throw std::runtime_error("Not inside an Ark repository.");
+        }
+    }
+    return current;
+}
+
 std::unordered_set<std::string> loadIgnoreFiles(){
   std::string repo_root = arkDir();
   std::vector<std::string> paths;
@@ -46,7 +63,6 @@ std::unordered_set<std::string> loadIgnoreFile(const std::string& path) {
     if (!(std::filesystem::exists(file) && std::filesystem::is_regular_file(file)))
         return patterns;
 
-    std::cout<<"loaded "<<file<<"\n";
 
     std::ifstream in(file);
     if (!in) {
@@ -80,7 +96,6 @@ bool isIgnored(const std::string& path,const std::unordered_set<std::string>& ig
   }
   return false;
 }
-
 
 
 std::vector<std::string> split(const std::string& s, char delimiter) {

@@ -33,7 +33,9 @@ void logBranch(std::string branch_name,int depth){
       data.insert(data.end(),temp.begin(),temp.end());
     }
     commit_hash = data[3];
-    std::cout<<"\n"<<data[data.size() - 1]<<"\n\n";
+    //TODO: fix the parsing logic its not right for message value cause space splitting splits the message
+    //and you only get the last word of commit message
+    // std::cout<<"\n"<<data[data.size() - 1]<<"\n\n";
   }
 }
 

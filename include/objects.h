@@ -24,6 +24,7 @@ public:
 
     std::string getSha256();
     void writeObjectToDisk();
+    bool isWrittenToDisk();
 };
 
 // ---------- Blob ----------
@@ -66,6 +67,14 @@ class Commit:public Object{
     Commit(const std::string& message,const std::string& parent_hash);
 };
 // ---------- Object base ----------
+
+std::unordered_map<std::string,Blob*> loadIndexAsBlobs();
+
+std::unordered_map<std::string,std::pair<std::string,std::string>> loadIndex();
+
+std::unordered_map<std::string,Blob*> loadWorkingDirectory();
+
+std::unordered_map<std::string,Blob*> loadWorkingDirectoryWithoutIgnored();
 
 
 #endif
