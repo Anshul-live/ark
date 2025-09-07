@@ -120,6 +120,57 @@ void Blob::loadFromDisk(const std::string& hash){
   this->content = content;
 }
 
+bool Blob::createFile(const std::string& path) {
+    std::filesystem::path p(path+this->name);
+        std::filesystem::create_directories(p.parent_path());
+
+        if (mode == "100644" || mode == "100755") {
+            std::ofstream out(p);
+            if (!out) {
+                std::cerr << "Failed to create file: " << p << "\n";
+                return false;
+            }
+            out << this->content;
+            out.close();
+
+            // Apply permissions
+            auto perms = (mode == "100644")
+                ? (std::filesystem::perms::owner_read | std::filesystem::perms::owner_write |
+                   std::filesystem::perms::group_read | std::filesystem::perms::others_read)
+                : (std::filesystem::perms::owner_all |
+                   std::filesystem::perms::group_read | std::filesystem::perms::group_exec |
+                   std::filesystem::perms::others_read | std::filesystem::perms::others_exec);
+
+            std::filesystem::permissions(p, perms,
+                                         std::filesystem::perm_options::replace);
+            return true;
+
+        } else if (mode == "120000") {
+            // Create symbolic link (data = target)
+            try {
+                std::filesystem::create_symlink(this->content, path);
+            } catch (const std::exception& e) {
+                std::cerr << "Failed to create symlink: " << e.what() << "\n";
+                return false;
+            }
+            return true;
+
+        } 
+}
+
+bool Blob::deleteFile(const std::string& path){
+  std::filesystem::path p(path+this->name); 
+  if(std::filesystem::exists(p)){
+    bool deleted = std::filesystem::remove(p);
+    if(!deleted){
+      std::cerr<<"unable to delete file "<<p.string()<<"\n";
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
+
 void TreeNode::loadFromDisk(const std::string& hash){
   std::string content = catFile(hash);
   std::stringstream content_stream(content);
@@ -254,19 +305,28 @@ void Tree::writeTreeToDisk(TreeNode* root) {
 }
 
 
-void Tree::buildWorkingDirectory(TreeNode* root,std::string path){
+void Tree::writeToWorkingDirectory(TreeNode* root,std::string path){
   if(!root)
     return;
   for(const auto& [name,obj]:root->children){
     if(Blob* blob = dynamic_cast<Blob*> (obj)){
-      std::cout<<path+name<<"\n";
-      std::filesystem::path p(path+name);
-      std::filesystem::create_directories(p.parent_path());
-      std::ofstream out(path+name,std::ios::binary);
-      out << blob->content;
+      blob->createFile(path);
     }
     else if(TreeNode* treenode = dynamic_cast<TreeNode*> (obj)){
-      buildWorkingDirectory(treenode,path+treenode->name+"/");
+      Tree::writeToWorkingDirectory(treenode,path+treenode->name+"/");
+    }
+  }
+}
+
+void Tree::deleteFromWorkingDirectory(TreeNode* root,std::string path){
+  if(!root)
+    return;
+  for(const auto& [name,obj]:root->children){
+    if(Blob* blob = dynamic_cast<Blob*> (obj)){
+      bool removed = blob->deleteFile(path);
+    }
+    else if(TreeNode* treenode = dynamic_cast<TreeNode*> (obj)){
+      Tree::deleteFromWorkingDirectory(treenode,path+treenode->name+"/");
     }
   }
 }
