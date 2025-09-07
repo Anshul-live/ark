@@ -33,7 +33,6 @@ public:
     Blob() = default;
 
     Blob(const std::string& filename);
-    void loadFromDisk(const std::string& hash);
 };
 
 // ---------- TreeNode ----------
@@ -41,15 +40,15 @@ class TreeNode : public Object {
 public:
     // Key = hash, Value = child object
     std::unordered_map<std::string, Object*> children;
-    void loadFromDisk(const std::string& hash);
 };
 
 // ---------- Tree ----------
 class Tree {
 public:
+  Tree() = default;
     TreeNode* root;
 
-    Tree();
+    Tree(const std::string& filename);
 
  void insertBlob(TreeNode* root,
                 const std::vector<std::string>& path,
@@ -59,17 +58,13 @@ public:
  
 
 void writeTreeToDisk(TreeNode* root);
-void loadTreeFromDisk(const std::string& hash);
-void buildWorkingDirectory(TreeNode* root,std::string path);
+
 };
 
 class Commit:public Object{
   public:
-    Tree* tree;
-    Commit();
+    Commit() = default;
     Commit(const std::string& message,const std::string& parent_hash);
-    Commit(const std::string& message,const std::string& parent1_hash,const std::string& parent2_hash);
-    void loadFromDisk(const std::string& hash);
 };
 // ---------- Object base ----------
 

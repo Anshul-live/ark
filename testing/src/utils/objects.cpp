@@ -10,7 +10,6 @@
 #include <compress.h>
 #include <objects.h>
 #include <hash-object.h>
-#include <cat-file.h>
 
 std::unordered_map<std::string,Blob*> loadIndexAsBlobs(){
   //TODO: implement me
@@ -115,43 +114,7 @@ Blob::Blob(const std::string& filename) {
         this->hash = this->getSha256();
 }
 
-void Blob::loadFromDisk(const std::string& hash){
-  std::string content = catFile(hash);
-  this->content = content;
-}
-
-void TreeNode::loadFromDisk(const std::string& hash){
-  std::string content = catFile(hash);
-  std::stringstream content_stream(content);
-  std::string line;
-  while(getline(content_stream,line)){
-    std::vector<std::string> line_content = split(line,' ');
-    std::string mode = line_content[0];
-    std::string type = line_content[1];
-    std::string hash = line_content[2];
-    std::string name = line_content[3];
-
-    if(type == "blob"){
-      Blob * blob = new Blob();
-      blob->loadFromDisk(hash);
-      blob->hash = hash;
-      blob->name = name;
-      blob->mode = mode;
-      this->children[name] = dynamic_cast<Object*>(blob);
-    }
-    else if(type == "tree"){
-      TreeNode* treenode = new TreeNode();
-      treenode->loadFromDisk(hash);
-      treenode->hash = hash;
-      treenode->name = name;
-      treenode->mode = mode;
-      this->children[name] = dynamic_cast<Object*>(treenode);
-    }
-  }
-  this->content = content;
-}
-
-Tree::Tree() {
+Tree::Tree(const std::string& filename) {
   std::unordered_map<std::string,std::pair<std::string,std::string>> blobs = loadIndex();
 
         root = new TreeNode();
@@ -205,11 +168,6 @@ Tree::Tree() {
         insertBlob(childNode, path, level + 1, hash, mode);
     }
 }
-
-void Tree::loadTreeFromDisk(const std::string& hash){
-  //TODO: implement this
-  this->root->loadFromDisk(hash);
-}
  
 
 void Tree::writeTreeToDisk(TreeNode* root) {
@@ -236,33 +194,10 @@ void Tree::writeTreeToDisk(TreeNode* root) {
     root->writeObjectToDisk();
 }
 
-
-void Tree::buildWorkingDirectory(TreeNode* root,std::string path){
-  if(!root)
-    return;
-  for(const auto& [name,obj]:root->children){
-    if(Blob* blob = dynamic_cast<Blob*> (obj)){
-      std::cout<<path+name<<"\n";
-      std::filesystem::path p(path+name);
-      std::filesystem::create_directories(p.parent_path());
-      std::ofstream out(path+name,std::ios::binary);
-      out << blob->content;
-    }
-    else if(TreeNode* treenode = dynamic_cast<TreeNode*> (obj)){
-      buildWorkingDirectory(treenode,path+treenode->name+"/");
-    }
-  }
-}
-
-Commit::Commit(){
-  this->tree = new Tree();
-}
-
 Commit::Commit(const std::string& message,const std::string& parent_hash){
       std::string ark_path = arkDir();
       std::string index_file_path = ark_path + "/.ark/index";
-      Tree * t = new Tree();
-      this->tree = t;
+      Tree * t = new Tree(index_file_path);
       t->writeTreeToDisk(t->root);
 
       // TODO: Implement properly
@@ -281,45 +216,12 @@ Commit::Commit(const std::string& message,const std::string& parent_hash){
       out.close();
 }
 
-Commit::Commit(const std::string& message,const std::string& parent1_hash,const std::string& parent2_hash){
-      std::string ark_path = arkDir();
-      std::string index_file_path = ark_path + "/.ark/index";
-      Tree * t = new Tree();
-      this->tree = t;
-      t->writeTreeToDisk(t->root);
-
-      // TODO: Implement properly
-
-      std::ostringstream buffer;
-      buffer << "tree "<< t->root->hash << "\n";
-      buffer << "parent "<<parent1_hash<<"\n";
-      buffer << "parent "<<parent2_hash<<"\n";
-      buffer << "author "<<"\n";
-      buffer << "committer"<<"\n\n";
-
-      buffer<<message<<"\n";
-      std::string raw_content = buffer.str();
-      this->content = "commit "+std::to_string(raw_content.size()) + std::string("\0",1)+raw_content;
-      this->hash = this->getSha256();
-      std::ofstream out(index_file_path);
-      out.close();
-}
-
-void Commit::loadFromDisk(const std::string& hash){
-  std::string content = catFile(hash);
-  std::stringstream content_stream(content);
-  std::string line;
-  getline(content_stream,line);
-  std::vector<std::string> tree_info = split(line,' ');
-  this->tree->root->loadFromDisk(tree_info[1]);
-}
-
 bool Object::isWrittenToDisk(){
   std::string repo_root = arkDir();
-  std::string object_dir = repo_root+"/.ark/objects/"+this->hash.substr(0,2)+"/";
+  std::string object_dir = repo_root+"/.ark/objects/"+this->hash.substr(0,3)+"/";
   if(!std::filesystem::exists(object_dir))
     return false;
-  if(!std::filesystem::exists(object_dir+this->hash.substr(2)))
+  if(!std::filesystem::exists(object_dir+this->hash.substr(3)))
     return false;
 
   return true;

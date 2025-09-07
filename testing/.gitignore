@@ -1,0 +1,5 @@
+.ark
+.arkignore
+build/*
+!build/.gitkeep
+run
