@@ -173,8 +173,8 @@ bool Blob::deleteFile(const std::string& path){
   return false;
 }
 
-void TreeNode::loadFromDisk(const std::string& hash){
-  std::string content = catFile(hash);
+void TreeNode::loadFromDisk(const std::string& node_hash){
+  std::string content = catFile(node_hash);
   std::stringstream content_stream(content);
   std::string line;
   while(getline(content_stream,line)){
@@ -183,7 +183,7 @@ void TreeNode::loadFromDisk(const std::string& hash){
     std::string type = line_content[1];
     std::string hash = line_content[2];
     std::string name = line_content[3];
-
+    std::cout<<line_content[1]<<"\n";
     if(type == "blob"){
       Blob * blob = new Blob();
       blob->loadFromDisk(hash);
@@ -221,17 +221,18 @@ void Tree::flattenHelper(TreeNode* root,std::unordered_map<std::string,std::stri
   }
 }
 
-Tree::Tree() {
-  std::unordered_map<std::string,std::pair<std::string,std::string>> blobs = loadIndex();
-
-        root = new TreeNode();
-
-        for (const auto& blob : blobs) {
+void Tree::buildFromIndex(){
+    std::unordered_map<std::string,std::pair<std::string,std::string>> blobs = loadIndex();
+    for (const auto& blob : blobs) {
             std::vector<std::string> path = split(blob.first, '/');
             std::string hash = blob.second.first;
             std::string mode = blob.second.second;
             insertBlob(root, path, 0, hash, mode);
-        }
+    }
+}
+
+Tree::Tree() {
+  root = new TreeNode();
     }
 
  void Tree::insertBlob(TreeNode* root,
@@ -341,6 +342,7 @@ Commit::Commit(const std::string& message,const std::string& parent_hash){
       std::string ark_path = arkDir();
       Tree * t = new Tree();
       this->tree = t;
+      this->tree->buildFromIndex();
       t->writeTreeToDisk(t->root);
 
       // TODO: Implement properly
@@ -361,6 +363,7 @@ Commit::Commit(const std::string& message,const std::string& parent1_hash,const 
       std::string ark_path = arkDir();
       Tree * t = new Tree();
       this->tree = t;
+      this->tree->buildFromIndex();
       t->writeTreeToDisk(t->root);
 
       // TODO: Implement properly

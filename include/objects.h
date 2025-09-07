@@ -62,6 +62,7 @@ public:
  
 
 void writeTreeToDisk(TreeNode* root);
+void buildFromIndex();
 void loadTreeFromDisk(const std::string& hash);
 void writeToWorkingDirectory(TreeNode* root,std::string path);
 void deleteFromWorkingDirectory(TreeNode* root,std::string path);
