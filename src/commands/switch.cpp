@@ -15,6 +15,16 @@ void switchBranch(const std::string& branch_name){
   }
   std::string source_commit_hash = getHead();
   std::string target_commit_hash = getBranchHash(branch_name);
+  if(source_commit_hash == target_commit_hash){
+    std::cout<<"already on branch "<<branch_name<<"\n";
+    return;
+  }
+Commit* source_commit = new Commit();
+source_commit->loadFromDisk(source_commit_hash);
+Commit* target_commit = new Commit();
+target_commit->loadFromDisk(target_commit_hash);
+source_commit->tree->deleteFromWorkingDirectory(source_commit->tree->root,repo_root);
+target_commit->tree->writeToWorkingDirectory(target_commit->tree->root,repo_root);
   std::cout<<"source :"<<source_commit_hash<<"\n";
   std::ofstream(repo_root+"/.ark/HEAD") << "ref: refs/heads/" + branch_name;
   std::cout<<"target :"<<target_commit_hash<<"\n";
