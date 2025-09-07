@@ -111,8 +111,5 @@ int main(int argc,char *argv[]){
       if(argc < 3){
         std::cout<<"cannot test";
       }
-      Commit* commit = new Commit();
-      commit->loadFromDisk(argv[2]);
-      commit->tree->buildWorkingDirectory(commit->tree->root,arkDir()+"/testing/");
     }
 }

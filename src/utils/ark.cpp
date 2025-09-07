@@ -153,7 +153,7 @@ std::string getCommitMessageFromEditor() {
 std::string getMode(const std::filesystem::path& path) {
     struct stat st;
     if (lstat(path.c_str(), &st) != 0) {
-        return 0; // error fallback
+        return "0"; // error fallback
     }
 
     if (S_ISREG(st.st_mode)) {
