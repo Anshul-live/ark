@@ -104,4 +104,11 @@ int main(int argc,char *argv[]){
     else if(subCommand == "commit"){
       commit();
     }
+    else if(subCommand == "test"){
+      if(argc < 3){
+        std::cout<<"cannot test";
+      }
+      // Commit* commit = new Commit();
+      // commit->loadFromDisk(argv[2]);
+    }
 }
