@@ -19,7 +19,6 @@ std::unordered_map<std::string,Blob*> loadIndexAsBlobs(){
 
 std::unordered_map<std::string,std::pair<std::string,std::string>> loadIndex(){
   std::string filename = arkDir() + "/.ark/index";
-  std::cout<<filename<<"\n";
       std::ifstream in(filename, std::ios::binary);
         if (!in) {
             std::cerr << "provided index file does not exist or can't be opened";
@@ -183,7 +182,6 @@ void TreeNode::loadFromDisk(const std::string& node_hash){
     std::string type = line_content[1];
     std::string hash = line_content[2];
     std::string name = line_content[3];
-    std::cout<<line_content[1]<<"\n";
     if(type == "blob"){
       Blob * blob = new Blob();
       blob->loadFromDisk(hash);
@@ -203,18 +201,18 @@ void TreeNode::loadFromDisk(const std::string& node_hash){
   }
   this->content = content;
 }
-std::unordered_map<std::string,std::string> Tree::flatten(){
-  std::unordered_map<std::string,std::string> flattened_tree;
+std::unordered_map<std::string,std::pair<std::string,std::string>> Tree::flatten(){
+  std::unordered_map<std::string,std::pair<std::string,std::string>> flattened_tree;
   flattenHelper(this->root,flattened_tree);
   return flattened_tree;
 }
 
-void Tree::flattenHelper(TreeNode* root,std::unordered_map<std::string,std::string>& entries){
+void Tree::flattenHelper(TreeNode* root,std::unordered_map<std::string,std::pair<std::string,std::string>>& entries){
   if(!root){
     return;
   }
   for(const auto& [name,obj]:root->children){
-    entries[name] = obj->hash;
+    entries[name] = {obj->hash,obj->mode};
     if(TreeNode* treenode = dynamic_cast<TreeNode*>(obj)){
       flattenHelper(treenode,entries);
     }
@@ -384,7 +382,6 @@ Commit::Commit(const std::string& message,const std::string& parent1_hash,const 
 void Commit::loadFromDisk(const std::string& hash){
   if(hash == NULL_HASH)
     return;
-
   std::string content = catFile(hash);
   std::stringstream content_stream(content);
   std::string line;
@@ -432,6 +429,29 @@ void Object::writeObjectToDisk(){
         out.write(content.data(), static_cast<std::streamsize>(content.size()));
     }
         out.close();
+}
+
+
+void writeToIndex(std::unordered_map<std::string,std::pair<std::string,std::string>>& entries){
+  std::string repo_root = arkDir();
+  std::string index_path = repo_root+"/.ark/index";
+    std::ostringstream index_stream;
+    for (auto& entry : entries) {
+        index_stream << entry.second.second 
+                     << " "
+                     << entry.second.first 
+                     << " "
+                     << entry.first
+                     << "\n";
+    }
+
+    std::ofstream out_file(index_path, std::ios::binary);
+    if (!out_file) {
+        std::cerr << "Failed to open index file for writing.\n";
+        return;
+    }
+    out_file << index_stream.str();
+    out_file.close();
 }
 
     

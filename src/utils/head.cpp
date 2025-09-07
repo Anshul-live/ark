@@ -30,6 +30,22 @@ std::string getHead(){
   return line;
 }
 
+//use when wanna change head to point to a file in refs/heads
+void updateHead(const std::string& branch_name){
+  std::string repo_root = arkDir();
+  std::string head_file = repo_root + "/.ark/HEAD";
+  if(!(std::filesystem::exists(head_file) && std::filesystem::is_regular_file(head_file))){
+    std::cerr<<"HEAD file not found\n";
+  }
+  std::ofstream out(head_file);
+  if(!out){
+    std::cerr<<"error reading branch file "<<head_file<<"\n";
+  }
+  out << "ref: refs/heads/"+branch_name;
+  out.close();
+}
+
+//use when wanna make whatever brannch head is pointing to to point to a commit
 void setHead(const std::string& commit_hash){
   std::string repo_root = arkDir();
   std::string head_path = repo_root + "/.ark/HEAD";
@@ -65,7 +81,6 @@ void setHead(const std::string& commit_hash){
 std::string getBranchHash(const std::string& branch_name){
   std::string repo_root = arkDir();
   std::string branch_path = repo_root + "/.ark/refs/heads/" + branch_name;
-  // std::cout<<"from branchHash "<<branch_path<<"\n";
   if(!(std::filesystem::exists(branch_path) && std::filesystem::is_regular_file(branch_path))){
     std::cerr<<"can't get branch hash as there is no branch "<<branch_name<<"\n";
   }
@@ -75,5 +90,6 @@ std::string getBranchHash(const std::string& branch_name){
   }
   std::string hash;
   in >> hash;
+  in.close();
   return hash;
 }

@@ -6,5 +6,6 @@
 std::string getHead();
 void setHead(const std::string& commit_hash);
 std::string getBranchHash(const std::string& branch_name);
+void updateHead(const std::string& branch_name);
 
 #endif // !HEAD_HPP
