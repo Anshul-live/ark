@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <switch.h>
+#include <head.h>
 
 void switchBranch(const std::string& branch_name){
 //TODO: implement logic of updating working dir based on branch 
@@ -12,6 +13,10 @@ void switchBranch(const std::string& branch_name){
     std::cerr<<"branch" << branch_name <<" does not exist\n";
     return;
   }
+  std::string source_commit_hash = getHead();
+  std::string target_commit_hash = getBranchHash(branch_name);
+  std::cout<<"source :"<<source_commit_hash<<"\n";
   std::ofstream(repo_root+"/.ark/HEAD") << "ref: refs/heads/" + branch_name;
+  std::cout<<"target :"<<target_commit_hash<<"\n";
   std::cout<<"switched branch to "<<branch_name<<"\n";
 }

@@ -15,18 +15,17 @@ bool status(){
   std::unordered_set<std::string> tracked;
   std::cout<<"Changes to be Commited:\n";
   for(const auto& [name,obj] : index){
-    if(obj.first == working_directory[name]->hash){
-      tracked.insert(name);
-      std::cout<<"\033[32m"<<name<<"\n";
-    }
+    tracked.insert(obj.first);
+    std::cout<<"\033[32m"<<name<<"\n";
   }
   std::cout<<"\n \033[0mChanges that will not be commited:\n";
 
   for(const auto& [name,obj]:working_directory){
-    if(obj->hash == latest_commited_files[name] && obj->hash == index[name].first)
-      continue;
-    staged = false;
+    // std::cout<<index[name].first<<"\n";
+    if(obj->hash == latest_commited_files[name] || tracked.find(obj->hash) == tracked.end()){
     std::cout<<"\033[31m"<<name<<"\n";
+    staged = false;
+    }
   }
   std::cout<<"\033[0m";
   return staged;
