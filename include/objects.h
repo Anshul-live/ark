@@ -45,7 +45,6 @@ public:
     // Key = hash, Value = child object
     std::unordered_map<std::string, Object*> children;
     void loadFromDisk(const std::string& hash);
-    void writeToWorkingTree();
 };
 
 // ---------- Tree ----------
