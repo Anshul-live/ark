@@ -260,7 +260,6 @@ Commit::Commit(){
 
 Commit::Commit(const std::string& message,const std::string& parent_hash){
       std::string ark_path = arkDir();
-      std::string index_file_path = ark_path + "/.ark/index";
       Tree * t = new Tree();
       this->tree = t;
       t->writeTreeToDisk(t->root);
@@ -277,13 +276,10 @@ Commit::Commit(const std::string& message,const std::string& parent_hash){
       std::string raw_content = buffer.str();
       this->content = "commit "+std::to_string(raw_content.size()) + std::string("\0",1)+raw_content;
       this->hash = this->getSha256();
-      std::ofstream out(index_file_path);
-      out.close();
 }
 
 Commit::Commit(const std::string& message,const std::string& parent1_hash,const std::string& parent2_hash){
       std::string ark_path = arkDir();
-      std::string index_file_path = ark_path + "/.ark/index";
       Tree * t = new Tree();
       this->tree = t;
       t->writeTreeToDisk(t->root);
@@ -301,8 +297,6 @@ Commit::Commit(const std::string& message,const std::string& parent1_hash,const 
       std::string raw_content = buffer.str();
       this->content = "commit "+std::to_string(raw_content.size()) + std::string("\0",1)+raw_content;
       this->hash = this->getSha256();
-      std::ofstream out(index_file_path);
-      out.close();
 }
 
 void Commit::loadFromDisk(const std::string& hash){
