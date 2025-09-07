@@ -3,6 +3,7 @@
 
 std::string commitTree(const std::string& tree_hash,const std::string& parent1_hash,const std::string& parent2_hash,const std::string& message){
   Commit* commit = new Commit();
+  commit->tree->buildFromIndex();
   std::string ark_path = arkDir();
   std::string index_file_path = ark_path + "/.ark/index";
 

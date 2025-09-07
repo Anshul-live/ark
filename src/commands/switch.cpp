@@ -15,8 +15,6 @@ void switchBranch(const std::string& branch_name){
   }
   std::string source_commit_hash = getHead();
   std::string target_commit_hash = getBranchHash(branch_name);
-  std::cout<<source_commit_hash<<"\n";
-  std::cout<<target_commit_hash<<"\n";
 Commit* source_commit = new Commit();
 source_commit->loadFromDisk(source_commit_hash);
 Commit* target_commit = new Commit();
@@ -24,7 +22,6 @@ target_commit->loadFromDisk(target_commit_hash);
 source_commit->tree->deleteFromWorkingDirectory(source_commit->tree->root,repo_root+"/");
 target_commit->tree->writeToWorkingDirectory(target_commit->tree->root,repo_root+"/");
   std::cout<<"source :"<<source_commit_hash<<"\n";
-  std::ofstream(repo_root+"/.ark/HEAD") << "ref: refs/heads/" + branch_name;
   std::cout<<"target :"<<target_commit_hash<<"\n";
   std::cout<<"switched branch to "<<branch_name<<"\n";
 }
