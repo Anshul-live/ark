@@ -15,10 +15,6 @@ void switchBranch(const std::string& branch_name){
   }
   std::string source_commit_hash = getHead();
   std::string target_commit_hash = getBranchHash(branch_name);
-  if(source_commit_hash == target_commit_hash){
-    std::cout<<"already on branch "<<branch_name<<"\n";
-    return;
-  }
 Commit* source_commit = new Commit();
 source_commit->loadFromDisk(source_commit_hash);
 Commit* target_commit = new Commit();
@@ -27,9 +23,11 @@ target_commit->loadFromDisk(target_commit_hash);
 // target_commit->tree->writeToWorkingDirectory(target_commit->tree->root,repo_root+"/");
 auto s = source_commit->tree->flatten();
 auto t = target_commit->tree->flatten();
+std::cout<<source_commit_hash<<"\n";
 for(auto i:s){
   std::cout<<i.first<<"\n";
 }
+std::cout<<target_commit_hash<<"\n";
 for(auto i:t){
   std::cout<<i.first<<"\n";
 }
