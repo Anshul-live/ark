@@ -61,6 +61,8 @@ public:
 void writeTreeToDisk(TreeNode* root);
 void loadTreeFromDisk(const std::string& hash);
 void buildWorkingDirectory(TreeNode* root,std::string path);
+std::unordered_map<std::string,std::string> flatten();
+void flattenHelper(TreeNode* root,std::unordered_map<std::string,std::string>& entries);
 };
 
 class Commit:public Object{
