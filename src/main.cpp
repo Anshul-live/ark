@@ -16,7 +16,6 @@
 #include <update-ref.h>
 
 //testing these
-#include <objects.h>
 
 int main(int argc,char *argv[]){
     
@@ -111,8 +110,8 @@ int main(int argc,char *argv[]){
       if(argc < 3){
         std::cout<<"cannot test";
       }
-      Commit* commit = new Commit();
-      commit->loadFromDisk(argv[2]);
+      // Commit* commit = new Commit();
+      // commit->loadFromDisk(argv[2]);
       // auto s = commit->tree->flatten();
         // for(auto i : s){
           // std::cout<<i.first<<std::endl;

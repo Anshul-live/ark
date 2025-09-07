@@ -54,7 +54,7 @@ void add(std::vector<std::string>& paths) {
                      << " "
                      << entry.second.first 
                      << " "
-                     << entry.first
+                     << entry.first         // relative path
                      << "\n";
     }
 

@@ -66,8 +66,8 @@ void buildFromIndex();
 void loadTreeFromDisk(const std::string& hash);
 void writeToWorkingDirectory(TreeNode* root,std::string path);
 void deleteFromWorkingDirectory(TreeNode* root,std::string path);
-std::unordered_map<std::string,std::string> flatten();
-void flattenHelper(TreeNode* root,std::unordered_map<std::string,std::string>& entries);
+std::unordered_map<std::string,std::pair<std::string,std::string>> flatten();
+void flattenHelper(TreeNode* root,std::unordered_map<std::string,std::pair<std::string,std::string>>& entries);
 };
 
 class Commit:public Object{
@@ -87,6 +87,8 @@ std::unordered_map<std::string,std::pair<std::string,std::string>> loadIndex();
 std::unordered_map<std::string,Blob*> loadWorkingDirectory();
 
 std::unordered_map<std::string,Blob*> loadWorkingDirectoryWithoutIgnored();
+
+void writeToIndex(std::unordered_map<std::string,std::pair<std::string,std::string>>& entries);
 
 
 #endif

@@ -11,7 +11,7 @@ bool status() {
 
     Commit* commit = new Commit();
     commit->loadFromDisk(commit_hash);
-    std::unordered_map<std::string, std::string> latest_committed_files = commit->tree->flatten();
+    std::unordered_map<std::string, std::pair<std::string,std::string>> latest_committed_files = commit->tree->flatten();
 
     std::unordered_set<std::string> printed;
 
@@ -20,7 +20,7 @@ bool status() {
         const std::string& index_hash = obj.first;
         auto it = latest_committed_files.find(name);
 
-        if (it == latest_committed_files.end() || it->second != index_hash) {
+        if (it == latest_committed_files.end() || it->second.first != index_hash) {
             std::cout << "\033[32m" << name << "\033[0m\n";
             printed.insert(name);
             clean = false;

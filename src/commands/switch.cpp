@@ -4,6 +4,7 @@
 #include <fstream>
 #include <switch.h>
 #include <head.h>
+#include <objects.h>
 
 void switchBranch(const std::string& branch_name){
 //TODO: implement logic of updating working dir based on branch 
@@ -21,7 +22,8 @@ Commit* target_commit = new Commit();
 target_commit->loadFromDisk(target_commit_hash);
 source_commit->tree->deleteFromWorkingDirectory(source_commit->tree->root,repo_root+"/");
 target_commit->tree->writeToWorkingDirectory(target_commit->tree->root,repo_root+"/");
-  std::cout<<"source :"<<source_commit_hash<<"\n";
-  std::cout<<"target :"<<target_commit_hash<<"\n";
   std::cout<<"switched branch to "<<branch_name<<"\n";
+  updateHead(branch_name);
+  std::unordered_map<std::string,std::pair<std::string,std::string>> entries = target_commit->tree->flatten();
+  writeToIndex(entries);
 }

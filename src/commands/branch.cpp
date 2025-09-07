@@ -18,7 +18,6 @@ void branch(const std::string& name){
     return;
   }
   std::string branch_base = getHead();
-  std::cout<<branch_base;
   out << branch_base;
   out.close();
 }
