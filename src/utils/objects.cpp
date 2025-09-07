@@ -121,6 +121,7 @@ void Blob::loadFromDisk(const std::string& hash){
 }
 
 bool Blob::createFile(const std::string& path) {
+  std::cout<<"creating file "<<path+this->name<<"\n";
     std::filesystem::path p(path+this->name);
         std::filesystem::create_directories(p.parent_path());
 
@@ -159,6 +160,7 @@ bool Blob::createFile(const std::string& path) {
 }
 
 bool Blob::deleteFile(const std::string& path){
+  std::cout<<"deleting file "<<path+this->name<<"\n";
   std::filesystem::path p(path+this->name); 
   if(std::filesystem::exists(p)){
     bool deleted = std::filesystem::remove(p);
