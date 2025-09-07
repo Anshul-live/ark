@@ -61,3 +61,18 @@ void setHead(const std::string& commit_hash){
   out << commit_hash;
   out.close();
 }
+
+std::string getBranchHash(const std::string& branch_name){
+  std::string repo_root = arkDir();
+  std::string branch_path = repo_root + "/.ark/refs/heads/" + branch_name;
+  if(!(std::filesystem::exists(branch_path) && std::filesystem::is_regular_file(branch_path))){
+    std::cerr<<"can't get branch hash as there is no branch "<<branch_name<<"\n";
+  }
+  std::ifstream in(branch_path);
+  if(!in){
+    std::cerr<<"error reading branch file "<<branch_path<<"\n";
+  }
+  std::string hash;
+  in >> hash;
+  return hash;
+}
