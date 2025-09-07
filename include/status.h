@@ -4,7 +4,7 @@
 #include <iostream>
 #include <objects.h>
 
-void status();
+bool status();
 
 #endif // !STATUS_HPP
 

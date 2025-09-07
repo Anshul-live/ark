@@ -150,6 +150,23 @@ void TreeNode::loadFromDisk(const std::string& hash){
   }
   this->content = content;
 }
+std::unordered_map<std::string,std::string> Tree::flatten(){
+  std::unordered_map<std::string,std::string> flattened_tree;
+  flattenHelper(this->root,flattened_tree);
+  return flattened_tree;
+}
+
+void Tree::flattenHelper(TreeNode* root,std::unordered_map<std::string,std::string>& entries){
+  if(!root){
+    return;
+  }
+  for(const auto& [name,obj]:root->children){
+    entries[name] = obj->hash;
+    if(TreeNode* treenode = dynamic_cast<TreeNode*>(obj)){
+      flattenHelper(treenode,entries);
+    }
+  }
+}
 
 Tree::Tree() {
   std::unordered_map<std::string,std::pair<std::string,std::string>> blobs = loadIndex();
@@ -300,6 +317,9 @@ Commit::Commit(const std::string& message,const std::string& parent1_hash,const 
 }
 
 void Commit::loadFromDisk(const std::string& hash){
+  if(hash == NULL_HASH)
+    return;
+
   std::string content = catFile(hash);
   std::stringstream content_stream(content);
   std::string line;
