@@ -240,7 +240,6 @@ ark/
 ├── include/                       # Header files
 ├── build/                         # Build artifacts
 ├── CMakeLists.txt                 # Build configuration
-└── run                            # Build script
 ```
 
 ## Development Status
@@ -262,7 +261,6 @@ ark/
 - Enhanced error handling
 - Performance optimizations
 - Additional Git compatibility features
-
 ---
 
 ## License
