@@ -89,7 +89,5 @@ std::unordered_map<std::string,Blob*> loadWorkingDirectory();
 std::unordered_map<std::string,Blob*> loadWorkingDirectoryWithoutIgnored();
 
 void writeToIndex(std::unordered_map<std::string,std::pair<std::string,std::string>>& entries);
-
-
 #endif
 
