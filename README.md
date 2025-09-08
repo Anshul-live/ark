@@ -1,18 +1,20 @@
-# ark
+# Ark
 
-## this readme is currently being put together by me and might not have the latest info.
+A minimal Git-like version control system built in C++ to understand how Git works under the hood. Ark implements the core concepts of content-addressable storage, object model, and version control in a clean, educational codebase.
 
-A tiny Git-like version control system (echo 'content addressable database' > /dev/null ) I’m building in C++ to learn how Git works under the hood.
+## Features
 
-Right now it can:
+Ark currently supports:
 
-* Make a repository folder (`.ark`)
-* Turn a file into a blob object (with Git-style header + content)
-* Stage files to index
-* Create Tree from the index
-* Commit the changes (not complete)
-
-It’s minimal — just enough to explore the core ideas.
+* **Repository Management**: Initialize repositories with `.ark` directory structure
+* **Object Model**: Blob, Tree, and Commit objects with Git-style headers
+* **Content Addressing**: SHA-256 hashing with compressed storage using zlib
+* **Staging Area**: Index-based staging system with file permissions
+* **Branching**: Create, list, and switch between branches
+* **Commits**: Create commits with parent relationships and merge support
+* **History**: View commit history and repository status
+* **Ignore System**: `.arkignore` file support for excluding files
+* **Working Directory**: Checkout and update working directory from commits
 
 ---
 
@@ -87,68 +89,179 @@ The binary will be at `build/ark` (or `build\Release\ark.exe` on Windows).
 
 ---
 
-## Usage
+## Commands
 
-Initialize a repo:
-
+### Repository Management
 ```bash
+# Initialize a new repository
 ./build/ark init
+
+# Show repository status
+./build/ark status
 ```
 
-Hash a file:
-
+### Object Operations
 ```bash
-./build/ark hash-object README.md
+# Create blob from file and get hash
+./build/ark hash-object <filename>
+
+# Read object content by hash
+./build/ark cat-file <object-hash>
+
+# Create tree from staged files
+./build/ark write-tree
+
+# Create commit from tree
+./build/ark commit-tree <tree-hash> [<parent1-hash>] [<parent2-hash>] [<message>]
 ```
 
-Add a file to the repository:
-
+### Staging and Commits
 ```bash
-./build/ark add README.md
+# Stage files for commit
+./build/ark add <filename> [<filename>...]
+
+# Create commit with editor
+./build/ark commit
 ```
 
-Read an object back:
-
+### Branching
 ```bash
-./build/ark cat-file <hash>
+# List all branches
+./build/ark branch
+
+# Create new branch
+./build/ark branch <branch-name>
+
+# Switch to branch
+./build/ark switch <branch-name>
+
+# Update branch reference
+./build/ark update-ref <ref-path> <commit-hash>
 ```
 
-Quick demo:
-
+### History
 ```bash
+# Show commit history
+./build/ark log
+```
+
+## Usage Examples
+
+### Basic Workflow
+```bash
+# Initialize repository
 ./build/ark init
-./build/ark add README.md
+
+# Stage files
+./build/ark add README.md src/main.cpp
+
+# Create commit
+./build/ark commit
+
+# Create and switch to new branch
+./build/ark branch feature-branch
+./build/ark switch feature-branch
+
+# View history
+./build/ark log
+```
+
+### Object Inspection
+```bash
+# Get file hash
 HASH=$(./build/ark hash-object README.md)
+echo "File hash: $HASH"
+
+# Read object content
 ./build/ark cat-file "$HASH"
 ```
 
 ---
 
-## How it works
+## Architecture
 
-* `init` initialises the repo
-* `hash-object` hashes a file to its SHA-256 hash
-* `cat-file` decompresses and prints the content
-* `add` updates the staging area with file references
-* `commit` creates tree from index and writes the tree to objects folder
+### Object Model
+Ark implements Git's object model with three core types:
+
+- **Blob**: Represents file content with Git-style headers (`blob <size>\0<content>`)
+- **Tree**: Directory structure containing references to blobs and subtrees
+- **Commit**: Snapshot with tree reference, parent commits, and metadata
+
+### Storage System
+- **Content Addressing**: Objects identified by SHA-256 hash
+- **Compression**: All objects compressed using zlib
+- **Directory Structure**: Objects stored as `objects/<first-2-chars>/<remaining-hash>`
+- **Index**: Text-based staging area with `mode hash path` entries
+
+### Repository Structure
+```
+.ark/
+├── objects/          # Content-addressable object storage
+├── refs/
+│   └── heads/        # Branch references
+├── HEAD              # Current branch or commit
+├── index             # Staging area
+└── config            # Repository configuration
+```
+
+### File Permissions
+Supports Git-style file modes:
+- `100644`: Regular file
+- `100755`: Executable file  
+- `040000`: Directory
+- `120000`: Symbolic link
 
 ---
 
-## Project layout
+## Project Structure
 
 ```
-src/main.cpp                 -> entry point
-src/commands/init.cpp        -> creates .ark
-src/commands/hash-object.cpp -> creates blobs
-src/commands/cat-file.cpp    -> converts compressed files to original data
-src/commands/add.cpp         -> stages files for commit
-src/commands/commit.cpp      -> commits the changes from staging area / index
-src/utils/compress.cpp       -> zlib helper
-src/utils/ark.cpp            -> helper methods for ark project
-src/utils/objects.cpp        -> contains definitions of each object(blob,tree,commit)
-include/                     -> headers
-build/                       -> for storing build files generated during building process
+ark/
+├── src/
+│   ├── main.cpp                    # Entry point and CLI interface
+│   ├── commands/                   # Command implementations
+│   │   ├── init.cpp               # Repository initialization
+│   │   ├── hash-object.cpp        # Blob creation
+│   │   ├── cat-file.cpp           # Object content retrieval
+│   │   ├── add.cpp                # Staging files
+│   │   ├── commit.cpp             # Commit creation
+│   │   ├── write-tree.cpp         # Tree creation from index
+│   │   ├── commit-tree.cpp        # Commit from tree
+│   │   ├── branch.cpp             # Branch management
+│   │   ├── switch.cpp             # Branch switching
+│   │   ├── log.cpp                # Commit history
+│   │   ├── status.cpp             # Repository status
+│   │   └── update-ref.cpp         # Reference updates
+│   └── utils/                     # Core utilities
+│       ├── ark.cpp                # Helper functions
+│       ├── compress.cpp           # zlib compression/decompression
+│       ├── objects.cpp            # Object model implementation
+│       └── head.cpp               # HEAD management
+├── include/                       # Header files
+├── build/                         # Build artifacts
+├── CMakeLists.txt                 # Build configuration
+└── run                            # Build script
 ```
+
+## Development Status
+
+### ✅ Implemented Features
+- Complete object model (Blob, Tree, Commit)
+- Repository initialization and management
+- Content-addressable storage with compression
+- Staging area and index management
+- Branch creation and switching
+- Commit history and logging
+- Working directory synchronization
+- File permission handling
+- Ignore file support(its not like git, here its exact file and directory matching, no regex support)
+
+### 🚧 In Progress / TODO
+- Configuration system completion
+- Improved commit message parsing
+- Enhanced error handling
+- Performance optimizations
+- Additional Git compatibility features
 
 ---
 
