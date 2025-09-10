@@ -26,7 +26,7 @@ std::unordered_map<std::string,std::pair<std::string,std::string>> loadIndex(){
         }
 
         std::unordered_map<std::string, std::pair<std::string, std::string>> blobs;
-        std::string mode, hash, name;
+std::string mode, hash, name;
 
         while (in >> mode >> hash >> name) {
             blobs[name] = {hash, mode};
@@ -454,4 +454,52 @@ void writeToIndex(std::unordered_map<std::string,std::pair<std::string,std::stri
     out_file.close();
 }
 
+std::string typeOf(Object* obj){
+  if(dynamic_cast<Blob*>(obj))
+    return "blob";
+  else if(dynamic_cast<TreeNode*>(obj))
+    return "tree";
+  else if(dynamic_cast<Commit*>(obj))
+    return "commit";
+  else  
+    return "object";
+}
+
+void treeDiff(Object* first,Object* second,std::unordered_map<std::string,std::vector<Object*>>& summary){
+  if(!first && !second){
+    return;
+  }
+  if(first && !second){
+    summary["delete"].push_back(first);
+    return;
+  }
+  if(!first && second){
+    summary["create"].push_back(second);
+    return;
+  }
+  std::string first_type = typeOf(first);
+  std::string second_type = typeOf(second);
+  std::cout<<"comparing "<<first_type<<" with"<<second_type<<std::endl;
+
+  if(first_type == "blob"){
+    if(first->hash != second->hash)
+      summary["overwrite"].push_back(second);
+    return;
+  }
+  TreeNode* first_tree = dynamic_cast<TreeNode*>(first);
+  TreeNode* second_tree = dynamic_cast<TreeNode*>(second);
+  std::unordered_set<std::string> all_keys;
+  for(auto child:first_tree->children){
+    all_keys.insert(child.first);
+  }
+  for(auto child:second_tree->children){
+    all_keys.insert(child.first);
+  }
+
+  for(auto key:all_keys){
+    auto first_child = first_tree->children.find(key) == first_tree->children.end() ? nullptr:first_tree->children[key];
+    auto second_child = second_tree->children.find(key) == second_tree->children.end() ? nullptr:second_tree->children[key];
+    treeDiff(first_child,second_child,summary);
+  }
+}
     

@@ -10,6 +10,8 @@
 
 std::unordered_set<std::string> loadIgnoreFile(const std::string& path);
 
+bool isIndexSameAsCommit(const std::string& commit_hash);
+
 std::unordered_set<std::string> loadIgnoreFiles();
 
 std::string normalizePath(const std::string& p);
