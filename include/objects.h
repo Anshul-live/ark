@@ -80,6 +80,8 @@ class Commit:public Object{
 };
 // ---------- Object base ----------
 
+std::string typeOf(Object* a,Object* b);
+
 std::unordered_map<std::string,Blob*> loadIndexAsBlobs();
 
 std::unordered_map<std::string,std::pair<std::string,std::string>> loadIndex();
@@ -89,5 +91,8 @@ std::unordered_map<std::string,Blob*> loadWorkingDirectory();
 std::unordered_map<std::string,Blob*> loadWorkingDirectoryWithoutIgnored();
 
 void writeToIndex(std::unordered_map<std::string,std::pair<std::string,std::string>>& entries);
+
+void treeDiff(Object* first,Object* second,std::unordered_map<std::string,std::vector<Object*>>& summary);
+
 #endif
 

@@ -40,7 +40,7 @@ bool status() {
         }
     }
 
-    std::cout << "\nUntracked files:\n";
+    std::cout << "\nUntracked changes:\n";
     for (const auto& [name, blob] : working_directory) {
         if (index.find(name) == index.end() && latest_committed_files.find(name) == latest_committed_files.end()) {
             std::cout << "\033[31m" << name << " (untracked)\033[0m\n";
