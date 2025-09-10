@@ -167,6 +167,25 @@ std::string getMode(const std::filesystem::path& path) {
     return "0"; // unknown type
 }
 
+bool isIndexSameAsCommit(const std::string& commit_hash){
+  std::unordered_map<std::string, std::pair<std::string, std::string>> index = loadIndex();
+
+    Commit* commit = new Commit();
+    commit->loadFromDisk(commit_hash);
+    std::unordered_map<std::string, std::pair<std::string,std::string>> latest_committed_files = commit->tree->flatten();
+
+    for (const auto& [name, obj] : index) {
+        const std::string& index_hash = obj.first;
+        auto it = latest_committed_files.find(name);
+
+        if (it == latest_committed_files.end() || it->second.first != index_hash) {
+          return false;
+        }
+    }
+    return true;
+
+}
+
 std::unordered_map<std::string,std::string> loadConfig(){
   //TODO: finish this please
   std::string repo_root = arkDir();

@@ -16,10 +16,22 @@ void switchBranch(const std::string& branch_name){
   }
   std::string source_commit_hash = getHead();
   std::string target_commit_hash = getBranchHash(branch_name);
+  if(source_commit_hash == target_commit_hash){
+    std::cerr<<"already on branch "<<branch_name<<std::endl;
+    return;
+  }
 Commit* source_commit = new Commit();
 source_commit->loadFromDisk(source_commit_hash);
 Commit* target_commit = new Commit();
 target_commit->loadFromDisk(target_commit_hash);
+std::unordered_map<std::string,std::vector<Object*>> diff;
+treeDiff(source_commit->tree->root,target_commit->tree->root,diff);
+for(auto type:diff){
+  std::cout<<type.first<<": \n";
+  for(auto obj:type.second){
+    std::cout<<obj->name<<"\n";
+  }
+}
 source_commit->tree->deleteFromWorkingDirectory(source_commit->tree->root,repo_root+"/");
 target_commit->tree->writeToWorkingDirectory(target_commit->tree->root,repo_root+"/");
   std::cout<<"switched branch to "<<branch_name<<"\n";
