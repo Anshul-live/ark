@@ -7,6 +7,7 @@
 #include <sstream>
 #include <unordered_set>
 #include <objects.h>
+std::string getTimezoneOffset();
 
 std::unordered_set<std::string> loadIgnoreFile(const std::string& path);
 

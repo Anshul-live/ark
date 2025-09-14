@@ -7,6 +7,29 @@
 #include <cstdlib>
 #include <unordered_map>
 #include <unordered_set>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+
+std::string getTimezoneOffset() {
+    auto now = std::chrono::system_clock::now();
+    std::time_t t = std::chrono::system_clock::to_time_t(now);
+
+    std::tm utc_tm = *std::gmtime(&t);
+    std::tm local_tm = *std::localtime(&t);
+
+    auto diff = std::mktime(&local_tm) - std::mktime(&utc_tm);
+
+    int hours   = diff / 3600;
+    int minutes = (std::abs(diff) % 3600) / 60;
+
+    std::ostringstream oss;
+    oss << (diff >= 0 ? '+' : '-')
+        << std::setw(2) << std::setfill('0') << std::abs(hours)
+        << std::setw(2) << std::setfill('0') << minutes;
+
+    return oss.str();
+}
 
 std::string normalizePath(const std::string& p) {
     return std::filesystem::path(p).lexically_normal().generic_string();
@@ -240,17 +263,10 @@ bool isIndexSameAsCommit(const std::string& commit_hash){
 
 }
 
-std::unordered_map<std::string,std::unordered_map<std::string,std::vector<std::string>>> loadConfig(){
-  //TODO: finish this please
-  std::string repo_root = arkDir();
-  std::string local_config_file = repo_root + "/.ark/config";
-  std::cout<<"loading local file"<<local_config_file<<"\n";
-
-  std::unordered_map<std::string,std::unordered_map<std::string,std::vector<std::string>>> config;
-
-  std::ifstream in(local_config_file);
+void loadConfigFile(const std::string& config_file,std::unordered_map<std::string,std::unordered_map<std::string,std::vector<std::string>>> &config){
+ std::ifstream in(config_file);
   if(!in){
-    std::cerr<<"Unable to open file "<<local_config_file<<std::endl;
+    return;
   }
   std::string section_name = "";
   std::string line;
@@ -271,14 +287,30 @@ std::unordered_map<std::string,std::unordered_map<std::string,std::vector<std::s
         std::cerr<<"invalid format on line\n";
         continue;
       }
-      std::string field_name = content[0];
-      std::string value = removeCharactersFromString(content[1],"\"");
+      std::string field_name = trim(content[0]);
+      std::string value = trim(removeCharactersFromString(content[1],"\""));
       config[section_name][field_name].push_back(value);
     }
     else{
       std::cerr<<"invalid symbols in config file\n";
     }
   }
+    in.close();
+}
+
+std::unordered_map<std::string,std::unordered_map<std::string,std::vector<std::string>>> loadConfig(){
+  //TODO: finish this please
+  std::string repo_root = arkDir();
+  std::string local_config_file = repo_root + "/.ark/config";
+  std::string user_config_file1 = "~/.arkconfig";
+  std::string user_config_file2 = "~/config/ark/config";
+  std::cout<<"loading local file"<<local_config_file<<"\n";
+
+  std::unordered_map<std::string,std::unordered_map<std::string,std::vector<std::string>>> config;
+
+  loadConfigFile(local_config_file,config);
+  loadConfigFile(user_config_file1,config);
+  loadConfigFile(user_config_file2,config);
 
   return config;
 }
