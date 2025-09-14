@@ -361,14 +361,23 @@ Commit::Commit(const std::string& message,const std::string& parent_hash){
       this->tree = t;
       this->tree->buildFromIndex();
       t->writeTreeToDisk(t->root);
+      std::unordered_map<std::string,std::unordered_map<std::string,std::vector<std::string>>> config = loadConfig();
+      if(config.count("user") == 0 || config["user"].count("name") == 0 || config["user"].count("email") == 0){
+        std::cerr<<"please provide the following values user.name and user.email before committing.\n";
+        exit(0);
+      }
+      std::string name = config["user"]["name"][0];
+      std::string email = config["user"]["email"][0];
+      std::cout<<"passed checks"<<std::endl;
+      long long timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+      std::string timezone_offset = getTimezoneOffset();
 
       // TODO: Implement properly
 
       std::ostringstream buffer;
       buffer << "tree "<< t->root->hash << "\n";
       buffer << "parent "<<parent_hash<<"\n";
-      buffer << "author "<<"\n";
-      buffer << "committer"<<"\n\n";
+      buffer << "committer "<<name<<" <"<<email<<"> " <<timestamp<<" "<< timezone_offset<<"\n";
 
       buffer<<message<<"\n";
       std::string raw_content = buffer.str();
@@ -382,15 +391,25 @@ Commit::Commit(const std::string& message,const std::string& parent1_hash,const 
       this->tree = t;
       this->tree->buildFromIndex();
       t->writeTreeToDisk(t->root);
+      std::unordered_map<std::string,std::unordered_map<std::string,std::vector<std::string>>> config = loadConfig();
+      if(!config.count("user") && !config["user"].count("name") && !config["user"].count("email")){
+        std::cerr<<"please provide the following values user.name and user.email before committing.\n";
+        exit(0);
+      } 
+      std::string name = config["user"]["name"][0];
+      std::string email = config["user"]["email"][0];
+      long long timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+      std::string timezone_offset = getTimezoneOffset();
 
       // TODO: Implement properly
-
       std::ostringstream buffer;
       buffer << "tree "<< t->root->hash << "\n";
       buffer << "parent "<<parent1_hash<<"\n";
       buffer << "parent "<<parent2_hash<<"\n";
-      buffer << "author "<<"\n";
-      buffer << "committer"<<"\n\n";
+      buffer << "committer "<<name<<" <"<<email<<"> " <<timestamp<<" "<< timezone_offset<<"\n";
+
+
+      // TODO: Implement properly
 
       buffer<<message<<"\n";
       std::string raw_content = buffer.str();
