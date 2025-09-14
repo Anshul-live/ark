@@ -172,6 +172,25 @@ bool Blob::deleteFile(const std::string& path){
   return false;
 }
 
+
+bool Blob::overwriteFile(const std::string& path) {
+  std::cout<<"overwriting file "<<path+this->name<<"\n";
+  std::filesystem::path p(path+this->name); 
+  if(!std::filesystem::exists(p)){
+    std::cout<<"file not found for overwriting falling back to creation\n";
+    this->createFile(path);
+    return false;
+  }
+  std::ofstream out(p);
+  if(!out){
+    std::cerr<<"error opening file "<<p.string()<<std::endl;
+    return false;
+  }
+  out << this->content;
+  out.close();
+  return true;
+}
+
 void TreeNode::loadFromDisk(const std::string& node_hash){
   std::string content = catFile(node_hash);
   std::stringstream content_stream(content);
@@ -465,41 +484,151 @@ std::string typeOf(Object* obj){
     return "object";
 }
 
-void treeDiff(Object* first,Object* second,std::unordered_map<std::string,std::vector<Object*>>& summary){
-  if(!first && !second){
-    return;
-  }
-  if(first && !second){
-    summary["delete"].push_back(first);
-    return;
-  }
-  if(!first && second){
-    summary["create"].push_back(second);
-    return;
-  }
-  std::string first_type = typeOf(first);
-  std::string second_type = typeOf(second);
-  std::cout<<"comparing "<<first_type<<" with"<<second_type<<std::endl;
 
-  if(first_type == "blob"){
-    if(first->hash != second->hash)
-      summary["overwrite"].push_back(second);
-    return;
-  }
-  TreeNode* first_tree = dynamic_cast<TreeNode*>(first);
-  TreeNode* second_tree = dynamic_cast<TreeNode*>(second);
-  std::unordered_set<std::string> all_keys;
-  for(auto child:first_tree->children){
-    all_keys.insert(child.first);
-  }
-  for(auto child:second_tree->children){
-    all_keys.insert(child.first);
-  }
+void treeDiff(
+    Object* first,
+    Object* second,
+    std::unordered_map<std::string, std::vector<std::pair<Object*, std::string>>>& summary,
+    std::string path
+) {
+    // both null → nothing to do
+    if (!first && !second) {
+        return;
+    }
 
-  for(auto key:all_keys){
-    auto first_child = first_tree->children.find(key) == first_tree->children.end() ? nullptr:first_tree->children[key];
-    auto second_child = second_tree->children.find(key) == second_tree->children.end() ? nullptr:second_tree->children[key];
-    treeDiff(first_child,second_child,summary);
-  }
+    // case: deleted
+    if (first && !second) {
+        if (typeOf(first) == "blob") {
+            summary["delete"].push_back({first, path});
+        }
+        return;
+    }
+
+    // case: created
+    if (!first && second) {
+        if (typeOf(second) == "blob") {
+            summary["create"].push_back({second, path});
+        }
+        return;
+    }
+
+    // both non-null
+    std::string first_type  = typeOf(first);
+    std::string second_type = typeOf(second);
+
+    // if either is a blob, compare directly
+    if (first_type == "blob" || second_type == "blob") {
+        if (first->hash != second->hash) {
+            if (second_type == "blob") {
+                summary["overwrite"].push_back({second, path});
+            }
+        }
+        return;
+    }
+
+    // both are trees → recurse
+    TreeNode* first_tree  = dynamic_cast<TreeNode*>(first);
+    TreeNode* second_tree = dynamic_cast<TreeNode*>(second);
+
+    std::unordered_set<std::string> all_keys;
+    for (auto& child : first_tree->children) {
+        all_keys.insert(child.first);
+    }
+    for (auto& child : second_tree->children) {
+        all_keys.insert(child.first);
+    }
+
+    for (auto& key : all_keys) {
+        Object* first_child  = (first_tree->children.count(key) ? first_tree->children[key] : nullptr);
+        Object* second_child = (second_tree->children.count(key) ? second_tree->children[key] : nullptr);
+
+        // new_path is directory path, so always add trailing "/"
+        std::string new_path = path + key + "/";
+
+        if (!first_child && second_child) {
+            if (typeOf(second_child) == "blob") {
+                summary["create"].push_back({second_child, path});
+            } else {
+                treeDiff(nullptr, second_child, summary, new_path);
+            }
+        }
+        else if (first_child && !second_child) {
+            if (typeOf(first_child) == "blob") {
+                summary["delete"].push_back({first_child, path});
+            } else {
+                treeDiff(first_child, nullptr, summary, new_path);
+            }
+        }
+        else {
+            // both exist
+            std::string ft = typeOf(first_child);
+            std::string st = typeOf(second_child);
+
+            if (ft == "blob" || st == "blob") {
+                if (first_child->hash != second_child->hash) {
+                    if (st == "blob") {
+                        summary["overwrite"].push_back({second_child, path});
+                    }
+                }
+            } else {
+                treeDiff(first_child, second_child, summary, new_path);
+            }
+        }
+    }
+}
+
+
+
+
+void buildWorkingDirectoryFromTreeDiff(std::unordered_map<std::string, std::vector<std::pair<Object*, std::string>>>& diff) {
+    std::string repo_root = arkDir();
+
+    if (diff.find("delete") != diff.end()) {
+        for (const auto& [obj, path] : diff["delete"]) {
+            Blob* blob = dynamic_cast<Blob*>(obj);
+            std::string full_path = repo_root + "/" + path; 
+            blob->deleteFile(full_path);
+        }
+    }
+
+    if (diff.find("create") != diff.end()) {
+        for (const auto& [obj, path] : diff["create"]) {
+            Blob* blob = dynamic_cast<Blob*>(obj);
+            std::string full_path = repo_root + "/" + path;
+            blob->createFile(full_path);
+        }
+    }
+
+    if (diff.find("overwrite") != diff.end()) {
+        for (const auto& [obj, path] : diff["overwrite"]) {
+            Blob* blob = dynamic_cast<Blob*>(obj);
+            std::string full_path = repo_root + "/" + path;
+            blob->overwriteFile(full_path);
+        }
+    }
 }
     
+// void buildWorkingDirectoryFromTreeDiff(std::unordered_map<std::string,std::vector<std::pair<Object*,std::string>>>& diff){
+//   std::string repo_root = arkDir();
+//   if(diff.find("delete") != diff.end()){
+//     for(const auto &[obj,path]:diff["delete"]){
+//       Blob* blob = dynamic_cast<Blob*>(obj);
+//       std::cout<<"deleting file"<<path+obj->name<<"\n";
+//       // blob->deleteFile(repo_root+"/"+path);
+//     }
+//   }
+//   if(diff.find("create") != diff.end()){
+//     for(const auto &[obj,path]:diff["create"]){
+//       Blob* blob = dynamic_cast<Blob*>(obj);
+//       std::cout<<"creating file"<<path+obj->name<<"\n";
+//       // blob->createFile(repo_root+"/"+path);
+//     }
+//   }
+//   if(diff.find("overwrite") != diff.end()){
+//     for(const auto &[obj,path]:diff["overwrite"]){
+//       Blob* blob = dynamic_cast<Blob*>(obj);
+//       std::cout<<"overwriting file"<<path+obj->name<<"\n";
+//       // blob->overwriteFile(repo_root+"/"+path);
+//     }
+//   }
+// }

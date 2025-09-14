@@ -24,16 +24,11 @@ Commit* source_commit = new Commit();
 source_commit->loadFromDisk(source_commit_hash);
 Commit* target_commit = new Commit();
 target_commit->loadFromDisk(target_commit_hash);
-std::unordered_map<std::string,std::vector<Object*>> diff;
-treeDiff(source_commit->tree->root,target_commit->tree->root,diff);
-for(auto type:diff){
-  std::cout<<type.first<<": \n";
-  for(auto obj:type.second){
-    std::cout<<obj->name<<"\n";
-  }
-}
-source_commit->tree->deleteFromWorkingDirectory(source_commit->tree->root,repo_root+"/");
-target_commit->tree->writeToWorkingDirectory(target_commit->tree->root,repo_root+"/");
+std::unordered_map<std::string,std::vector<std::pair<Object*,std::string>>> diff;
+treeDiff(source_commit->tree->root,target_commit->tree->root,diff,"");
+buildWorkingDirectoryFromTreeDiff(diff);
+// source_commit->tree->deleteFromWorkingDirectory(source_commit->tree->root,repo_root+"/");
+// target_commit->tree->writeToWorkingDirectory(target_commit->tree->root,repo_root+"/");
   std::cout<<"switched branch to "<<branch_name<<"\n";
   updateHead(branch_name);
   std::unordered_map<std::string,std::pair<std::string,std::string>> entries = target_commit->tree->flatten();

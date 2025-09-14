@@ -37,6 +37,7 @@ public:
     void writeToWorkingTree();
     bool createFile(const std::string& path);
     bool deleteFile(const std::string& path);
+    bool overwriteFile(const std::string& path);
 };
 
 // ---------- TreeNode ----------
@@ -92,7 +93,9 @@ std::unordered_map<std::string,Blob*> loadWorkingDirectoryWithoutIgnored();
 
 void writeToIndex(std::unordered_map<std::string,std::pair<std::string,std::string>>& entries);
 
-void treeDiff(Object* first,Object* second,std::unordered_map<std::string,std::vector<Object*>>& summary);
+void treeDiff(Object* first,Object* second,std::unordered_map<std::string,std::vector<std::pair<Object*,std::string>>>& summary,std::string path);
+
+void buildWorkingDirectoryFromTreeDiff(std::unordered_map<std::string,std::vector<std::pair<Object*,std::string>>>& diff);
 
 #endif
 
