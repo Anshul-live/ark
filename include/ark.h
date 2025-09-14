@@ -18,7 +18,17 @@ std::string normalizePath(const std::string& p);
 
 bool isIgnored(const std::string& pattern,const std::unordered_set<std::string>& ignored_patterns);
 
+std::string toLower(const std::string& input) ;
+
 std::string trim(const std::string& s);
+
+std::string trim(const std::string& s,std::string del);
+
+std::string removeCharactersFromString(const std::string& s,std::string del);
+
+std::string removeExtraConsecutiveOccurences(const std::string& s,char c,int limit);
+
+std::string replaceCharacter(const std::string& s,char original,char replacement);
 
 std::vector<std::string> split(const std::string& s, char delimiter);
 
@@ -34,7 +44,7 @@ std::string getCommitMessageFromEditor();
 
 std::string readFileContent(const std::string& file);
 
-std::unordered_map<std::string,std::string> loadConfig();
+std::unordered_map<std::string,std::unordered_map<std::string,std::vector<std::string>>> loadConfig();
 
 std::string arkDir();
 
