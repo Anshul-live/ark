@@ -254,13 +254,14 @@ ark/
 - Working directory synchronization
 - File permission handling
 - Ignore file support(its not like git, here its exact file and directory matching, no regex support)
+- Configuration system
 
 ### 🚧 In Progress / TODO
-- Configuration system completion
 - Improved commit message parsing
 - Enhanced error handling
 - Performance optimizations
-- Additional Git compatibility features
+- Merge
+- Reset
 ---
 
 ## License
