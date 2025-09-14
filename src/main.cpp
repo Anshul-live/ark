@@ -16,6 +16,7 @@
 #include <update-ref.h>
 
 //testing these
+#include <ark.h>
 
 int main(int argc,char *argv[]){
     
@@ -110,11 +111,14 @@ int main(int argc,char *argv[]){
       if(argc < 3){
         std::cout<<"cannot test";
       }
-      // Commit* commit = new Commit();
-      // commit->loadFromDisk(argv[2]);
-      // auto s = commit->tree->flatten();
-        // for(auto i : s){
-          // std::cout<<i.first<<std::endl;
-        // }
+      auto config = loadConfig();
+      for(auto [section,field_data] : config){
+        for(auto [field,values] : field_data){
+          for(auto entry:values){
+            std::cout<<section<<"."<<field<<"="<<entry<<std::endl;
+          }
+
+        }
+      }
     }
 }

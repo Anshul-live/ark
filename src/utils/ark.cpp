@@ -11,6 +11,54 @@
 std::string normalizePath(const std::string& p) {
     return std::filesystem::path(p).lexically_normal().generic_string();
 }
+std::string trim(const std::string& s,std::string del) {
+    size_t start = s.find_first_not_of(del);
+    if (start == std::string::npos)
+        return "";
+
+    size_t end = s.find_last_not_of(del);
+    return s.substr(start, end - start + 1);
+}
+
+std::string removeCharactersFromString(const std::string& s,std::string del){
+  std::unordered_set<char> st(del.begin(),del.end());
+  std::string result;
+  for(char c:s){
+    if(st.count(c)){
+      continue;
+    }
+      result+=c;
+  }
+  return result;
+}
+
+std::string replaceCharacter(const std::string& s,char original,char replacement){
+  std::string result;
+  for(char c:s){
+    if(c == original)
+      c = replacement;
+
+    result.push_back(c);
+  }
+  return result;
+}
+std::string removeExtraConsecutiveOccurences(const std::string& s,char c,int limit){
+  std::string result;
+  int count = 0;
+  for(int i = 0;i < s.length();i++){
+    char el = s[i];
+    if(el == c){
+      if(count <= limit){
+        result.push_back(el);
+        count++;
+      }
+      continue;
+    }
+    count = 0;
+    result.push_back(el);
+  }
+  return result;
+}
 
 std::string trim(const std::string& s) {
     size_t start = s.find_first_not_of(" \t\r\n");
@@ -19,6 +67,12 @@ std::string trim(const std::string& s) {
 
     size_t end = s.find_last_not_of(" \t\r\n");
     return s.substr(start, end - start + 1);
+}
+std::string toLower(const std::string& input) {
+    std::string result = input;
+    std::transform(result.begin(), result.end(), result.begin(),
+                   [](unsigned char c){ return std::tolower(c); });
+    return result;
 }
 
 std::string arkDir(){
@@ -186,12 +240,46 @@ bool isIndexSameAsCommit(const std::string& commit_hash){
 
 }
 
-std::unordered_map<std::string,std::string> loadConfig(){
+std::unordered_map<std::string,std::unordered_map<std::string,std::vector<std::string>>> loadConfig(){
   //TODO: finish this please
   std::string repo_root = arkDir();
-  std::unordered_map<std::string,std::string> config;
   std::string local_config_file = repo_root + "/.ark/config";
-  std::cout<<local_config_file<<"\n";
+  std::cout<<"loading local file"<<local_config_file<<"\n";
+
+  std::unordered_map<std::string,std::unordered_map<std::string,std::vector<std::string>>> config;
+
+  std::ifstream in(local_config_file);
+  if(!in){
+    std::cerr<<"Unable to open file "<<local_config_file<<std::endl;
+  }
+  std::string section_name = "";
+  std::string line;
+  while(getline(in,line)){
+    if(line.empty() || line[0] == '3')
+      continue;
+    line = toLower(trim(line));
+
+    if(line[0] == '['){
+      line = removeCharactersFromString(line,"[]\"");
+      line = removeExtraConsecutiveOccurences(line,' ',1);
+      line = replaceCharacter(line,' ','.');
+      section_name = trim(line);
+    }
+    else if(line[0] >= 'a' && line[0] <= 'z'){
+      std::vector<std::string> content = split(line,'=');
+      if(content.size() != 2 ){
+        std::cerr<<"invalid format on line\n";
+        continue;
+      }
+      std::string field_name = content[0];
+      std::string value = removeCharactersFromString(content[1],"\"");
+      config[section_name][field_name].push_back(value);
+    }
+    else{
+      std::cerr<<"invalid symbols in config file\n";
+    }
+  }
+
   return config;
 }
 
