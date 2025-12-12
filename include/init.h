@@ -1,6 +1,6 @@
 #ifndef INIT_H
 #define INIT_H
 
-void init();
+int cmd_init(const std::vector<std::string>& args);
 
 #endif

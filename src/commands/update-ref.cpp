@@ -1,6 +1,15 @@
 #include <update-ref.h>
 #include <ark.h>
 
+int cmd_updateRef(const std::vector<std::string> &args){
+  if(args.size() < 2){
+            std::cout << "Usage: update-ref <ref-path> <commit-hash>" << std::endl;
+            return 1;
+  }
+  updateRef(args[0],args[1]);
+  return 0;
+}
+
 void updateRef(const std::string& ref_path,const std::string& hash){
   std::string repo_root = arkDir();
   if(ref_path.rfind("refs/heads/",0) != 0){

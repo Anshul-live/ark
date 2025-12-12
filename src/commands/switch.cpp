@@ -6,19 +6,24 @@
 #include <head.h>
 #include <objects.h>
 
-void switchBranch(const std::string& branch_name){
+int cmd_switch(const std::vector<std::string> &args){
+  if(args.size() < 1){
+      std::cout << "Usage: add <filename>/<dirname> ..." << std::endl;
+      return 1;
+  }
+  const std::string& branch_name = args[0];
   std::string repo_root = arkDir();
   std::string branch_path = repo_root + "/.ark/refs/heads/" + branch_name;
   if(!(std::filesystem::exists(branch_path) && std::filesystem::is_regular_file(branch_path))){
     std::cerr<<"branch" << branch_name <<" does not exist\n";
-    return;
+    return 1;
   }
   std::string source_commit_hash = getHead();
   std::string target_commit_hash = getBranchHash(branch_name);
   std::string source_branch_name = getHeadBranchName();
   if(!isHeadDetached() && source_branch_name == branch_name){
     std::cerr<<"already on branch "<<branch_name<<std::endl;
-    return;
+    return 0;
   }
 Commit* source_commit = new Commit();
 source_commit->loadFromDisk(source_commit_hash);
@@ -33,4 +38,5 @@ buildWorkingDirectoryFromTreeDiff(diff);
   updateHead(branch_name);
   std::unordered_map<std::string,std::pair<std::string,std::string>> entries = target_commit->tree->flatten();
   writeToIndex(entries);
+  return 0;
 }
