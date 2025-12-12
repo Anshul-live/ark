@@ -3,7 +3,7 @@
 
 #include <string>
 
-void switchBranch(const std::string& branch_name);
+int cmd_switch(const std::vector<std::string> &args);
 
 
 #endif // !SWITCH_HPP

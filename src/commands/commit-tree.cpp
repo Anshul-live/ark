@@ -1,5 +1,16 @@
-
 #include <commit-tree.h>
+
+int cmd_commitTree(const std::vector<std::string> &args){
+  int argc = args.size();
+    if(argc < 1){
+            std::cout << "Usage: commit-tree <tree-hash> [<parent1-hash>] [<parent2-hash>]" << std::endl;
+            return 1;
+        }
+        std::string parent1_hash = argc > 1 ? args[2] : "";
+        std::string parent2_hash = argc > 2 ? args[3] : "";
+        std::string message = argc > 3 ? args[4] : "";
+        std::cout<<commitTree(args[0],parent1_hash,parent2_hash,message);
+}
 
 std::string commitTree(const std::string& tree_hash,const std::string& parent1_hash,const std::string& parent2_hash,const std::string& message){
   Commit* commit = new Commit();
@@ -7,7 +18,6 @@ std::string commitTree(const std::string& tree_hash,const std::string& parent1_h
   std::string ark_path = arkDir();
   std::string index_file_path = ark_path + "/.ark/index";
 
-      // TODO: Implement properly
       std::ostringstream buffer;
       buffer << "tree "<< tree_hash << "\n";
       if(parent1_hash != "")

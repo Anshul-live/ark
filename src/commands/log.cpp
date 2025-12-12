@@ -39,12 +39,12 @@ void logBranch(std::string branch_name,int depth){
   }
 }
 
-void log(){
+int cmd_log(const std::vector<std::string> &args){
   std::string repo_root = arkDir();
   std::ifstream in(repo_root+"/.ark/HEAD");
   if(!in){
     std::cerr<<"unable to read HEAD";
-    return;
+    return 1;
   }
   std::string line;
   getline(in,line);
@@ -56,7 +56,8 @@ void log(){
   }
   else{
     std::cout<<"HEAD is detached\n";
-    return;
+    return 1;
   }
   logBranch(current_branch,-1);
+  return 0;
 }

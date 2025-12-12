@@ -2,7 +2,8 @@
 #define BRANCH_HPP
 
 #include <string>
+#include <vector>
 
-void branch(const std::string& name);
+int cmd_branch(const std::vector<std::string> &args);
 
 #endif // !BRANCH_HPP
