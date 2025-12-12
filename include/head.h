@@ -9,5 +9,6 @@ std::string getBranchHash(const std::string& branch_name);
 void updateHead(const std::string& branch_name);
 bool isHeadDetached();
 std::string getHeadBranchName();
+void printBranches();
 
 #endif // !HEAD_HPP
