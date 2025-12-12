@@ -3,6 +3,6 @@
 #include <vector>
 #include <string>
 
-void add(std::vector<std::string>& paths);
+int cmd_add(const std::vector<std::string>& args);
 
 #endif

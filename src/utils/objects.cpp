@@ -295,7 +295,6 @@ Tree::Tree() {
 }
 
 void Tree::loadTreeFromDisk(const std::string& hash){
-  //TODO: implement this
   this->root->loadFromDisk(hash);
 }
  
@@ -372,8 +371,6 @@ Commit::Commit(const std::string& message,const std::string& parent_hash){
       long long timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
       std::string timezone_offset = getTimezoneOffset();
 
-      // TODO: Implement properly
-
       std::ostringstream buffer;
       buffer << "tree "<< t->root->hash << "\n";
       buffer << "parent "<<parent_hash<<"\n";
@@ -401,15 +398,12 @@ Commit::Commit(const std::string& message,const std::string& parent1_hash,const 
       long long timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
       std::string timezone_offset = getTimezoneOffset();
 
-      // TODO: Implement properly
       std::ostringstream buffer;
       buffer << "tree "<< t->root->hash << "\n";
       buffer << "parent "<<parent1_hash<<"\n";
       buffer << "parent "<<parent2_hash<<"\n";
       buffer << "committer "<<name<<" <"<<email<<"> " <<timestamp<<" "<< timezone_offset<<"\n";
 
-
-      // TODO: Implement properly
 
       buffer<<message<<"\n";
       std::string raw_content = buffer.str();
@@ -597,8 +591,6 @@ void treeDiff(
 }
 
 
-
-
 void buildWorkingDirectoryFromTreeDiff(std::unordered_map<std::string, std::vector<std::pair<Object*, std::string>>>& diff) {
     std::string repo_root = arkDir();
 
@@ -626,28 +618,3 @@ void buildWorkingDirectoryFromTreeDiff(std::unordered_map<std::string, std::vect
         }
     }
 }
-    
-// void buildWorkingDirectoryFromTreeDiff(std::unordered_map<std::string,std::vector<std::pair<Object*,std::string>>>& diff){
-//   std::string repo_root = arkDir();
-//   if(diff.find("delete") != diff.end()){
-//     for(const auto &[obj,path]:diff["delete"]){
-//       Blob* blob = dynamic_cast<Blob*>(obj);
-//       std::cout<<"deleting file"<<path+obj->name<<"\n";
-//       // blob->deleteFile(repo_root+"/"+path);
-//     }
-//   }
-//   if(diff.find("create") != diff.end()){
-//     for(const auto &[obj,path]:diff["create"]){
-//       Blob* blob = dynamic_cast<Blob*>(obj);
-//       std::cout<<"creating file"<<path+obj->name<<"\n";
-//       // blob->createFile(repo_root+"/"+path);
-//     }
-//   }
-//   if(diff.find("overwrite") != diff.end()){
-//     for(const auto &[obj,path]:diff["overwrite"]){
-//       Blob* blob = dynamic_cast<Blob*>(obj);
-//       std::cout<<"overwriting file"<<path+obj->name<<"\n";
-//       // blob->overwriteFile(repo_root+"/"+path);
-//     }
-//   }
-// }

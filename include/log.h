@@ -3,7 +3,6 @@
 #include <iostream>
 
 void logBranch(std::string branch_name,int depth);
-
-void log();
+int cmd_log(const std::vector<std::string> &args);
 
 #endif

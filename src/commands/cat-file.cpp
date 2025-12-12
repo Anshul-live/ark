@@ -4,6 +4,18 @@
 #include <filesystem>
 #include <ark.h>
 #include <compress.h>
+#include <cat-file.h>
+
+int cmd_catFile(const std::vector<std::string> &args){
+  if(args.size() < 1){
+      std::cout << "Usage: cat-file <object-hash>" << std::endl;
+      return 1;
+  } 
+  std::string object_hash = args[0];
+  std::string file_content = catFile(object_hash);
+  std::cout << file_content << "\n";
+  return 0;
+}
 
 std::string catFile(const std::string& object_hash){
     std::string ark_path = arkDir();
