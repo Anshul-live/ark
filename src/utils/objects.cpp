@@ -11,6 +11,7 @@
 #include <objects.h>
 #include <hash-object.h>
 #include <cat-file.h>
+#include <index.h>
 
 std::unordered_map<std::string,Blob*> loadIndexAsBlobs(){
   //TODO: implement me
