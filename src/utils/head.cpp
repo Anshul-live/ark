@@ -30,6 +30,41 @@ std::string getHead(){
   return line;
 }
 
+std::string getHeadBranchName(){
+  std::string repo_root = arkDir();
+  std::string head_path = repo_root + "/.ark/HEAD";
+  std::ifstream in(head_path);
+  if(!in){
+    std::cerr<<"error finding HEAD\n";
+    return "";
+  }
+  std::string line;
+  getline(in,line);
+  if(line.rfind("ref: ",0) == 0){
+    std::string branch_name = line.substr(5);
+    return branch_name;
+  }
+  in.close();
+  return "";
+}
+
+bool isHeadDetached(){
+  std::string repo_root = arkDir();
+  std::string head_path = repo_root + "/.ark/HEAD";
+  std::ifstream in(head_path);
+  if(!in){
+    std::cerr<<"error finding HEAD\n";
+    return "";
+  }
+  std::string line;
+  getline(in,line);
+  if(line.rfind("ref: ",0) == 0){
+    return false;
+  }
+  in.close();
+  return true;
+}
+
 //use when wanna change head to point to a file in refs/heads
 void updateHead(const std::string& branch_name){
   std::string repo_root = arkDir();
