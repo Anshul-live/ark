@@ -2,6 +2,11 @@
 #include <objects.h>
 #include <head.h>
 
+int cmd_status(const std::vector<std::string> &args){
+  status();
+  return 0;
+}
+
 bool status() {
     bool clean = true;
 

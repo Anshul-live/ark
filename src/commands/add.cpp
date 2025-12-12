@@ -9,7 +9,17 @@
 #include <fstream>
 #include <sys/stat.h>
 
-void add(std::vector<std::string>& paths) {
+int cmd_add(const std::vector<std::string>& args) {
+    if(args.size() < 1){
+            std::cout << "Usage:  add <filename>/<dirname> ..." << std::endl;
+            return 1;
+    }
+
+    std::vector<std::string> paths;
+    for(auto & path : args){
+      paths.push_back(path);
+    }
+
     std::filesystem::path repo_root = arkDir();                     
     std::filesystem::path index_path = repo_root / ".ark" / "index"; 
     std::unordered_set<std::string> ignored_patterns = loadIgnoreFiles();
@@ -61,9 +71,10 @@ void add(std::vector<std::string>& paths) {
     std::ofstream out_file(index_path, std::ios::binary);
     if (!out_file) {
         std::cerr << "Failed to open index file for writing.\n";
-        return;
+        return 1;
     }
     out_file << index_stream.str();
     out_file.close();
+    return 0;
 }
 
