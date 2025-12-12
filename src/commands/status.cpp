@@ -27,19 +27,6 @@ bool status() {
         }
     }
 
-    std::cout << "\nChanges not staged for commit:\n";
-    for (const auto& [name, blob] : working_directory) {
-        auto it = index.find(name);
-        if (it != index.end()) {
-            const std::string& index_hash = it->second.first;
-            if (blob->hash != index_hash) {
-                std::cout << "\033[31m" << name << " (modified)\033[0m\n";
-                printed.insert(name);
-                clean = false;
-            }
-        }
-    }
-
     std::cout << "\nUntracked changes:\n";
     for (const auto& [name, blob] : working_directory) {
         if (index.find(name) == index.end() && latest_committed_files.find(name) == latest_committed_files.end()) {

@@ -5,6 +5,4 @@
 
 void branch(const std::string& name);
 
-void printBranches();
-
 #endif // !BRANCH_HPP
