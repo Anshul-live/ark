@@ -7,7 +7,6 @@
 #include <objects.h>
 
 void switchBranch(const std::string& branch_name){
-//TODO: implement logic of updating working dir based on branch 
   std::string repo_root = arkDir();
   std::string branch_path = repo_root + "/.ark/refs/heads/" + branch_name;
   if(!(std::filesystem::exists(branch_path) && std::filesystem::is_regular_file(branch_path))){
@@ -16,7 +15,8 @@ void switchBranch(const std::string& branch_name){
   }
   std::string source_commit_hash = getHead();
   std::string target_commit_hash = getBranchHash(branch_name);
-  if(source_commit_hash == target_commit_hash){
+  std::string source_branch_name = getHeadBranchName();
+  if(!isHeadDetached() && source_branch_name == branch_name){
     std::cerr<<"already on branch "<<branch_name<<std::endl;
     return;
   }
