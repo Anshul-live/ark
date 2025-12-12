@@ -186,6 +186,16 @@ std::vector<std::string> split(const std::string& s, char delimiter) {
     return tokens;
 }
 
+bool isFileModifiedComparedToIndex(const std::string& path,
+                                   const std::string& index_hash) {
+    if (!std::filesystem::exists(path))
+        return false; // deletion handled elsewhere
+
+    Blob fresh(path);
+    return fresh.hash != index_hash;
+}
+
+
 std::string getEditor() {
     const char* editor = std::getenv("GIT_EDITOR");
     if (!editor) editor = std::getenv("VISUAL");
@@ -304,7 +314,7 @@ std::unordered_map<std::string,std::unordered_map<std::string,std::vector<std::s
   std::string local_config_file = repo_root + "/.ark/config";
   std::string user_config_file1 = "~/.arkconfig";
   std::string user_config_file2 = "~/config/ark/config";
-  std::cout<<"loading local file"<<local_config_file<<"\n";
+  // std::cout<<"loading local file"<<local_config_file<<"\n";
 
   std::unordered_map<std::string,std::unordered_map<std::string,std::vector<std::string>>> config;
 

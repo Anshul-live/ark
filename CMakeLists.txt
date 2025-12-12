@@ -25,6 +25,7 @@ add_executable(ark
     src/utils/objects.cpp
     src/utils/ark.cpp
     src/utils/head.cpp
+    src/utils/index.cpp
 )
 
 target_include_directories(ark PUBLIC ${CMAKE_SOURCE_DIR}/include)
