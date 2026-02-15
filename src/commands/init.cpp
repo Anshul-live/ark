@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <ark.h>
 #include <init.h>
+#include <config.h>
 
 int cmd_init(const std::vector<std::string>& args){
 
@@ -21,6 +22,8 @@ int cmd_init(const std::vector<std::string>& args){
     std::ofstream(ark_path + "/HEAD") << "ref: refs/heads/main";
     std::ofstream(ark_path + "/index");
     std::ofstream(ark_path + "/config");
-    loadConfig();
+    
+    Config config;
+    config.load();
     return 0;
 }

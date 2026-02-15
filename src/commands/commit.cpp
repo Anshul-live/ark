@@ -1,23 +1,38 @@
+#include <ark.h>
+#include <ref.h>
 #include <iostream>
 #include <objects.h>
-#include <filesystem>
-#include <ark.h>
-#include <head.h>
+#include <config.h>
 
-int cmd_commit(const std::vector<std::string> &args){
-  std::string commit_hash = getHead();
-  if(isIndexSameAsCommit(commit_hash)){
-    std::cout<<"no changes to commit";
-    return 0;
+int cmd_commit(const std::vector<std::string> &args) {
+  Ref ref;
+  std::string commitHash = ref.getHeadCommit();
+  
+  Commit* latestCommit = nullptr;
+  if (!commitHash.empty()) {
+      latestCommit = new Commit();
+      latestCommit->loadFromDisk(commitHash);
   }
+  
+  bool hasChanges = true;
+  if (latestCommit) {
+      hasChanges = false;
+  }
+  
+  if (!latestCommit || hasChanges) {
+  }
+  
   std::string message = getCommitMessageFromEditor();
-  if(message.empty()){
-    std::cerr<<"commit aborted due to empty message";
+  if (message.empty()) {
+    std::cerr << "commit aborted due to empty message";
     return 1;
   }
-  std::string parent_commit_hash = getHead();
-  Commit *commit = new Commit(message,parent_commit_hash);
+  
+  std::string parentCommitHash = ref.getHeadCommit();
+  Commit* commit = new Commit(message, parentCommitHash);
   commit->writeObjectToDisk();
-  setHead(commit->hash);
+  ref.setHeadToCommit(commit->hash);
+  
+  delete latestCommit;
   return 0;
 }

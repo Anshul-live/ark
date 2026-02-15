@@ -3,32 +3,37 @@
 #include <fstream>
 #include <filesystem>
 #include <ark.h>
-#include <head.h>
+#include <ref.h>
 
 int cmd_branch(const std::vector<std::string> &args){
+  Ref ref;
+  
   if(args.size() < 1){
-      printBranches();
+      auto branches = ref.listBranches();
+      std::string currentBranch = ref.getCurrentBranchName();
+      for (const auto& branch : branches) {
+          if (branch == currentBranch) {
+              std::cout << "* \033[32m" << branch << "\033[0m\n";
+          } else {
+              std::cout << "  " << branch << "\n";
+          }
+      }
       return 0;
   }
+  
   std::string name = args[0];
-  std::string commit_hash = getHead();
-  if(commit_hash == NULL_HASH){
-    std::cerr<<"please make a commit first";
+  std::string commitHash = ref.getHeadCommit();
+  
+  if(commitHash.empty() || commitHash == NULL_HASH){
+    std::cerr << "please make a commit first";
     return 1;
   }
-  std::string refs_path = arkDir() + "/.ark/refs/" ;
-  std::string branch_path = refs_path +"heads/" + name;
-  if(std::filesystem::exists(branch_path) && std::filesystem::is_regular_file(branch_path)){
-    std::cout<<"branch already exists"<<std::endl;
+  
+  if(ref.branchExists(name)){
+    std::cout << "branch already exists" << std::endl;
     return 1;
   }
-  std::ofstream out(branch_path,std::ios::binary);
-  if(!out){
-    std::cerr<<"error creating branch";
-    return 1;
-  }
-  std::string branch_base = getHead();
-  out << branch_base;
-  out.close();
+  
+  ref.createBranch(name, commitHash);
   return 0;
 }

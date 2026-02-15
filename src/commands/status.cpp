@@ -1,7 +1,8 @@
 #include <status.h>
 #include <objects.h>
-#include <head.h>
+#include <ref.h>
 #include <index.h>
+#include <repository.h>
 
 int cmd_status(const std::vector<std::string> &args){
   status();
@@ -16,16 +17,22 @@ bool status() {
     Index idx;
     idx.load();
 
-    std::string commit_hash = getHead();
+    Ref ref;
+    std::string commitHash = ref.getHeadCommit();
+    
     Commit commit;
-    commit.loadFromDisk(commit_hash);
+    if (!commitHash.empty()) {
+        commit.loadFromDisk(commitHash);
+    }
+    
     auto latest_committed_files = commit.tree->flatten();
 
     std::unordered_set<std::string> printed;
 
     std::cout << "Changes to be committed:\n";
 
-    for (const auto& [path, entry] : idx.entries) {
+    auto indexEntries = idx.getEntries();
+    for (const auto& [path, entry] : indexEntries) {
         const std::string& index_hash = entry.hash;
 
         auto it = latest_committed_files.find(path);
@@ -44,7 +51,6 @@ bool status() {
     for (const auto& [path, blob] : working_directory) {
         const IndexEntry* ent = idx.get(path);
         if (ent) {
-            // fresh compute working-tree hash
             Blob fresh(path);
 
             if (fresh.hash != ent->hash &&
@@ -73,4 +79,3 @@ bool status() {
 
     return clean;
 }
-

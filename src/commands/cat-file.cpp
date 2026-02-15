@@ -5,6 +5,7 @@
 #include <ark.h>
 #include <compress.h>
 #include <cat-file.h>
+#include <repository.h>
 
 int cmd_catFile(const std::vector<std::string> &args){
   if(args.size() < 1){
@@ -18,13 +19,13 @@ int cmd_catFile(const std::vector<std::string> &args){
 }
 
 std::string catFile(const std::string& object_hash){
-    std::string ark_path = arkDir();
+    Repository repo;
     if(object_hash.size() < 3){
         std::cerr << "Error: invalid object hash" << std::endl;
         return "";
     }
 
-    std::string dirname = ark_path + "/.ark/objects/" + object_hash.substr(0,2);
+    std::string dirname = repo.objectsDir() + "/" + object_hash.substr(0,2);
     std::string filename = dirname + "/" + object_hash.substr(2);
 
     if(!std::filesystem::exists(filename)){
@@ -43,7 +44,6 @@ std::string catFile(const std::string& object_hash){
         return "";
     }
 
-    // Git-like object: "<type> <size>\0<content>"
     size_t null_position = data.find('\0');
     if(null_position == std::string::npos){
         std::cerr << "Error: invalid object format" << std::endl;
