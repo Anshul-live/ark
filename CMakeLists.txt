@@ -35,7 +35,6 @@ add_executable(ark
     src/utils/compress.cpp
     src/utils/objects.cpp
     src/utils/ark.cpp
-    src/utils/head.cpp
     src/utils/index.cpp
     src/utils/config.cpp
     src/utils/repository.cpp
@@ -65,6 +64,7 @@ add_executable(test_ark
     tests/test_ref.cpp
     tests/test_index.cpp
     tests/test_objects.cpp
+    tests/test_e2e.cpp
     
     src/commands/hash-object.cpp
     src/commands/cat-file.cpp
@@ -83,7 +83,6 @@ add_executable(test_ark
     src/utils/compress.cpp
     src/utils/objects.cpp
     src/utils/ark.cpp
-    src/utils/head.cpp
     src/utils/index.cpp
     src/utils/config.cpp
     src/utils/repository.cpp

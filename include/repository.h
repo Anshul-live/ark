@@ -3,8 +3,14 @@
 
 #include <string>
 #include <unordered_set>
+#include <unordered_map>
 #include <filesystem>
 #include <memory>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+
+class Blob;
 
 class Repository {
 public:
@@ -15,6 +21,7 @@ public:
     static void initialize(const std::string& logPath);
     
     std::string root() const;
+    std::string arkPath() const;
     std::string objectsDir() const;
     std::string indexPath() const;
     std::string configPath() const;
@@ -30,6 +37,11 @@ public:
 
     std::unordered_set<std::string> loadIgnorePatterns() const;
     bool isIgnored(const std::string& path) const;
+
+    std::string getTimezoneOffset() const;
+
+    std::unordered_map<std::string, Blob*> loadWorkingDirectory() const;
+    std::unordered_map<std::string, Blob*> loadWorkingDirectoryWithoutIgnored() const;
 
 private:
     std::string findRoot() const;

@@ -16,6 +16,11 @@ cmake_install.cmake
 Makefile
 *.cmake
 CMakeLists.txt.user
+compile_commands.json
+
+# Cache
+.cache/
+.ccache/
 
 # IDE
 .vscode/

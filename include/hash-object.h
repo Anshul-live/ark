@@ -4,8 +4,6 @@
 #include <string>
 #include <objects.h>
 
-Blob* hashObject(const std::string& filename);
-
 int cmd_hashObject(const std::vector<std::string> &args);
 
 #endif

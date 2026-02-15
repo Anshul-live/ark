@@ -126,6 +126,11 @@ void Ref::updateBranch(const std::string& branchName, const std::string& commitH
     writeBranchRef("refs/heads/" + branchName, commitHash);
 }
 
+void Ref::updateRef(const std::string& refPath, const std::string& commitHash) {
+    LOG_INFO("Updating ref " + refPath + " to " + commitHash);
+    writeBranchRef(refPath, commitHash);
+}
+
 std::string Ref::readBranchRef(const std::string& branchPath) const {
     try {
         Repository repo;

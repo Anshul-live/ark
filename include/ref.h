@@ -15,6 +15,7 @@ public:
     void setHeadToCommit(const std::string& commitHash);
     void setHeadToBranch(const std::string& branchName);
     void updateBranch(const std::string& branchName, const std::string& commitHash);
+    void updateRef(const std::string& refPath, const std::string& commitHash);
     
     std::string getBranchHash(const std::string& branchName) const;
     bool branchExists(const std::string& branchName) const;

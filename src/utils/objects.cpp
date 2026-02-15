@@ -12,87 +12,8 @@
 #include <openssl/sha.h>
 #include <sstream>
 #include <string>
-
-std::unordered_map<std::string, Blob *> loadIndexAsBlobs() {
-  // TODO: implement me
-}
-
-std::unordered_map<std::string, std::pair<std::string, std::string>>
-loadIndex() {
-  std::string filename = arkDir() + "/.ark/index";
-  std::ifstream in(filename, std::ios::binary);
-  if (!in) {
-    std::cerr << "provided index file does not exist or can't be opened";
-    return {};
-  }
-
-  std::unordered_map<std::string, std::pair<std::string, std::string>> blobs;
-  std::string mode, hash, name;
-
-  while (in >> mode >> hash >> name) {
-    blobs[name] = {hash, mode};
-  }
-  return blobs;
-}
-
-std::unordered_map<std::string, Blob *> loadWorkingDirectoryWithoutIgnored() {
-  std::filesystem::path repo_root = arkDir(); // repo root
-  std::unordered_set<std::string> ignored_patterns = loadIgnoreFiles();
-  std::unordered_map<std::string, Blob *> blobs;
-  std::vector<std::string> paths;
-  paths.push_back(repo_root);
-  for (int i = 0; i < paths.size(); i++) {
-    std::filesystem::path path = std::filesystem::absolute(paths[i]);
-    std::string generic_path = normalizePath(path);
-
-    if (isIgnored(generic_path, ignored_patterns)) {
-      continue;
-    }
-
-    if (!std::filesystem::exists(path)) {
-      std::cerr << path << " does not exist.\n";
-      continue;
-    }
-
-    if (std::filesystem::is_regular_file(path)) {
-      Blob *blob = hashObject(path);
-      std::string mode = getMode(path);
-      blobs[std::filesystem::relative(path, repo_root).string()] = blob;
-    } else if (std::filesystem::is_directory(path)) {
-      if (isIgnored(generic_path + "/", ignored_patterns)) {
-        continue;
-      }
-      for (const auto &entry : std::filesystem::directory_iterator(path)) {
-        paths.push_back(entry.path().string());
-      }
-    }
-  }
-  return blobs;
-}
-
-std::unordered_map<std::string, Blob *> loadWorkingDirectory() {
-  std::filesystem::path repo_root = arkDir();
-  std::vector<std::string> paths;
-  paths.push_back(repo_root);
-  std::unordered_map<std::string, Blob *> blobs;
-
-  for (int i = 0; i < paths.size(); i++) {
-    std::string path = paths[i];
-    path = std::filesystem::relative(path, repo_root);
-    if (std::filesystem::is_regular_file(path)) {
-      Blob *blob = hashObject(path);
-      std::string mode = getMode(path);
-      blobs[path] = blob;
-    } else if (std::filesystem::is_directory(path)) {
-      if (path == ".ark")
-        continue;
-      for (const auto &entry : std::filesystem::directory_iterator(path)) {
-        paths.push_back(entry.path().string());
-      }
-    }
-  }
-  return blobs;
-}
+#include <repository.h>
+#include <config.h>
 
 Blob::Blob(const std::string &filename) {
   std::ifstream file(filename, std::ios::binary);
@@ -111,8 +32,12 @@ Blob::Blob(const std::string &filename) {
   this->hash = this->getSha256();
 }
 
+Blob* Blob::fromFile(const std::string& filename) {
+  return new Blob(filename);
+}
+
 void Blob::loadFromDisk(const std::string &hash) {
-  std::string content = catFile(hash);
+  std::string content = Object::readFromDisk(hash);
   this->content = content;
 }
 
@@ -190,11 +115,12 @@ bool Blob::overwriteFile(const std::string &path) {
 }
 
 void TreeNode::loadFromDisk(const std::string &node_hash) {
-  std::string content = catFile(node_hash);
+  std::string content = Object::readFromDisk(node_hash);
   std::stringstream content_stream(content);
   std::string line;
+  Config config;
   while (getline(content_stream, line)) {
-    std::vector<std::string> line_content = split(line, ' ');
+    std::vector<std::string> line_content = config.split(line, ' ');
     std::string mode = line_content[0];
     std::string type = line_content[1];
     std::string hash = line_content[2];
@@ -241,10 +167,12 @@ void Tree::flattenHelper(
 }
 
 void Tree::buildFromIndex() {
-  std::unordered_map<std::string, std::pair<std::string, std::string>> blobs =
-      loadIndex();
+  Index idx;
+  idx.load();
+  auto blobs = idx.toMap();
+  Config config;
   for (const auto &blob : blobs) {
-    std::vector<std::string> path = split(blob.first, '/');
+    std::vector<std::string> path = config.split(blob.first, '/');
     std::string hash = blob.second.first;
     std::string mode = blob.second.second;
     insertBlob(root, path, 0, hash, mode);
@@ -322,6 +250,13 @@ void Tree::writeTreeToDisk(TreeNode *root) {
   root->writeObjectToDisk();
 }
 
+Tree* Tree::write() {
+  Tree* t = new Tree();
+  t->buildFromIndex();
+  t->writeTreeToDisk(t->root);
+  return t;
+}
+
 void Tree::writeToWorkingDirectory(TreeNode *root, std::string path) {
   if (!root)
     return;
@@ -349,26 +284,24 @@ void Tree::deleteFromWorkingDirectory(TreeNode *root, std::string path) {
 Commit::Commit() { this->tree = new Tree(); }
 
 Commit::Commit(const std::string &message, const std::string &parent_hash) {
-  std::string ark_path = arkDir();
+  Repository repo;
+  Config config;
+  config.load();
   Tree *t = new Tree();
   this->tree = t;
   this->tree->buildFromIndex();
   t->writeTreeToDisk(t->root);
-  std::unordered_map<std::string,
-                     std::unordered_map<std::string, std::vector<std::string>>>
-      config = loadConfig();
-  if (config.count("user") == 0 || config["user"].count("name") == 0 ||
-      config["user"].count("email") == 0) {
+  if (!config.hasUserConfig()) {
     std::cerr << "please provide the following values user.name and user.email "
                  "before committing.\n";
     exit(0);
   }
-  std::string name = config["user"]["name"][0];
-  std::string email = config["user"]["email"][0];
+  std::string name = config.getUserName();
+  std::string email = config.getUserEmail();
   std::cout << "passed checks" << std::endl;
   long long timestamp =
       std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  std::string timezone_offset = getTimezoneOffset();
+  std::string timezone_offset = repo.getTimezoneOffset();
 
   std::ostringstream buffer;
   buffer << "tree " << t->root->hash << "\n";
@@ -385,25 +318,23 @@ Commit::Commit(const std::string &message, const std::string &parent_hash) {
 
 Commit::Commit(const std::string &message, const std::string &parent1_hash,
                const std::string &parent2_hash) {
-  std::string ark_path = arkDir();
+  Repository repo;
+  Config config;
+  config.load();
   Tree *t = new Tree();
   this->tree = t;
   this->tree->buildFromIndex();
   t->writeTreeToDisk(t->root);
-  std::unordered_map<std::string,
-                     std::unordered_map<std::string, std::vector<std::string>>>
-      config = loadConfig();
-  if (!config.count("user") && !config["user"].count("name") &&
-      !config["user"].count("email")) {
+  if (!config.hasUserConfig()) {
     std::cerr << "please provide the following values user.name and user.email "
                  "before committing.\n";
     exit(0);
   }
-  std::string name = config["user"]["name"][0];
-  std::string email = config["user"]["email"][0];
+  std::string name = config.getUserName();
+  std::string email = config.getUserEmail();
   long long timestamp =
       std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  std::string timezone_offset = getTimezoneOffset();
+  std::string timezone_offset = repo.getTimezoneOffset();
 
   std::ostringstream buffer;
   buffer << "tree " << t->root->hash << "\n";
@@ -422,18 +353,80 @@ Commit::Commit(const std::string &message, const std::string &parent1_hash,
 void Commit::loadFromDisk(const std::string &hash) {
   if (hash == NULL_HASH)
     return;
-  std::string content = catFile(hash);
+  std::string content = Object::readFromDisk(hash);
   std::stringstream content_stream(content);
   std::string line;
   getline(content_stream, line);
-  std::vector<std::string> tree_info = split(line, ' ');
+  Config config;
+  std::vector<std::string> tree_info = config.split(line, ' ');
   this->tree->root->loadFromDisk(tree_info[1]);
 }
 
+Commit* Commit::create(const std::string& treeHash, const std::string& parent1Hash, 
+                      const std::string& parent2Hash, const std::string& message) {
+  Commit* commit = new Commit();
+  
+  commit->tree = new Tree();
+  commit->tree->root->loadFromDisk(treeHash);
+  
+  Config config;
+  config.load();
+  if (!config.hasUserConfig()) {
+    std::cerr << "please provide user.name and user.email before committing.\n";
+    exit(0);
+  }
+  
+  std::string name = config.getUserName();
+  std::string email = config.getUserEmail();
+  long long timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+  
+  Repository repo;
+  std::string timezone_offset = repo.getTimezoneOffset();
+  
+  std::ostringstream buffer;
+  buffer << "tree " << treeHash << "\n";
+  if (!parent1Hash.empty()) {
+    buffer << "parent " << parent1Hash << "\n";
+  }
+  if (!parent2Hash.empty()) {
+    buffer << "parent " << parent2Hash << "\n";
+  }
+  buffer << "committer " << name << " <" << email << "> " << timestamp << " " << timezone_offset << "\n";
+  buffer << message << "\n";
+  
+  std::string raw_content = buffer.str();
+  commit->content = "commit " + std::to_string(raw_content.size()) + std::string("\0", 1) + raw_content;
+  commit->hash = commit->getSha256();
+  commit->writeObjectToDisk();
+  
+  return commit;
+}
+
+std::string Object::readFromDisk(const std::string& hash) {
+  Repository repo;
+  std::string object_dir = repo.objectsDir() + "/" + hash.substr(0, 2) + "/";
+  std::string object_file = object_dir + hash.substr(2);
+  
+  if (!std::filesystem::exists(object_file)) {
+    return "";
+  }
+  
+  std::ifstream in(object_file, std::ios::binary);
+  if (!in) {
+    return "";
+  }
+  
+  std::ostringstream buffer;
+  buffer << in.rdbuf();
+  std::string compressed = buffer.str();
+  
+  return decompressObject(compressed);
+}
+
 bool Object::isWrittenToDisk() {
-  std::string repo_root = arkDir();
+  Repository repo;
   std::string object_dir =
-      repo_root + "/.ark/objects/" + this->hash.substr(0, 2) + "/";
+      repo.objectsDir() + "/" + this->hash.substr(0, 2) + "/";
   if (!std::filesystem::exists(object_dir))
     return false;
   if (!std::filesystem::exists(object_dir + this->hash.substr(2)))
@@ -457,8 +450,8 @@ std::string Object::getSha256() {
   return hexStream.str();
 }
 void Object::writeObjectToDisk() {
-  std::string arkPath = arkDir() + "/.ark";
-  std::string dirName = arkPath + "/objects/" + hash.substr(0, 2);
+  Repository repo;
+  std::string dirName = repo.objectsDir() + "/" + hash.substr(0, 2);
   std::string fileName = dirName + "/" + hash.substr(2);
   std::filesystem::create_directories(dirName);
   std::string compressed_object_content = compressObject(content);
@@ -472,68 +465,42 @@ void Object::writeObjectToDisk() {
   out.close();
 }
 
-void writeToIndex(
-    std::unordered_map<std::string, std::pair<std::string, std::string>>
-        &entries) {
-  std::string repo_root = arkDir();
-  std::string index_path = repo_root + "/.ark/index";
-  std::ostringstream index_stream;
-  for (auto &entry : entries) {
-    index_stream << entry.second.second << " " << entry.second.first << " "
-                 << entry.first << "\n";
-  }
-
-  std::ofstream out_file(index_path, std::ios::binary);
-  if (!out_file) {
-    std::cerr << "Failed to open index file for writing.\n";
-    return;
-  }
-  out_file << index_stream.str();
-  out_file.close();
-}
-
-std::string typeOf(Object *obj) {
-  if (dynamic_cast<Blob *>(obj))
+std::string Object::typeName() const {
+  if (dynamic_cast<Blob *>(const_cast<Object*>(this)))
     return "blob";
-  else if (dynamic_cast<TreeNode *>(obj))
+  else if (dynamic_cast<TreeNode *>(const_cast<Object*>(this)))
     return "tree";
-  else if (dynamic_cast<Commit *>(obj))
+  else if (dynamic_cast<Commit *>(const_cast<Object*>(this)))
     return "commit";
   else
     return "object";
 }
 
-void treeDiff(
-    Object *first, Object *second,
-    std::unordered_map<std::string,
-                       std::vector<std::pair<Object *, std::string>>> &summary,
-    std::string path) {
-  // both null → nothing to do
+void Tree::diff(
+    TreeNode *first, TreeNode *second,
+    std::unordered_map<std::string, std::vector<std::pair<Object *, std::string>>> &summary,
+    const std::string &path) {
   if (!first && !second) {
     return;
   }
 
-  // case: deleted
   if (first && !second) {
-    if (typeOf(first) == "blob") {
+    if (first->typeName() == "blob") {
       summary["delete"].push_back({first, path});
     }
     return;
   }
 
-  // case: created
   if (!first && second) {
-    if (typeOf(second) == "blob") {
+    if (second->typeName() == "blob") {
       summary["create"].push_back({second, path});
     }
     return;
   }
 
-  // both non-null
-  std::string first_type = typeOf(first);
-  std::string second_type = typeOf(second);
+  std::string first_type = first->typeName();
+  std::string second_type = second->typeName();
 
-  // if either is a blob, compare directly
   if (first_type == "blob" || second_type == "blob") {
     if (first->hash != second->hash) {
       if (second_type == "blob") {
@@ -543,44 +510,42 @@ void treeDiff(
     return;
   }
 
-  // both are trees → recurse
-  TreeNode *first_tree = dynamic_cast<TreeNode *>(first);
-  TreeNode *second_tree = dynamic_cast<TreeNode *>(second);
-
   std::unordered_set<std::string> all_keys;
-  for (auto &child : first_tree->children) {
+  for (auto &child : first->children) {
     all_keys.insert(child.first);
   }
-  for (auto &child : second_tree->children) {
+  for (auto &child : second->children) {
     all_keys.insert(child.first);
   }
 
   for (auto &key : all_keys) {
     Object *first_child =
-        (first_tree->children.count(key) ? first_tree->children[key] : nullptr);
+        (first->children.count(key) ? first->children[key] : nullptr);
     Object *second_child =
-        (second_tree->children.count(key) ? second_tree->children[key]
-                                          : nullptr);
+        (second->children.count(key) ? second->children[key]
+                                      : nullptr);
 
-    // new_path is directory path, so always add trailing "/"
     std::string new_path = path + key + "/";
 
     if (!first_child && second_child) {
-      if (typeOf(second_child) == "blob") {
+      if (second_child->typeName() == "blob") {
         summary["create"].push_back({second_child, path});
       } else {
-        treeDiff(nullptr, second_child, summary, new_path);
+        TreeNode *tn_first = dynamic_cast<TreeNode *>(first_child);
+        TreeNode *tn_second = dynamic_cast<TreeNode *>(second_child);
+        diff(tn_first, tn_second, summary, new_path);
       }
     } else if (first_child && !second_child) {
-      if (typeOf(first_child) == "blob") {
+      if (first_child->typeName() == "blob") {
         summary["delete"].push_back({first_child, path});
       } else {
-        treeDiff(first_child, nullptr, summary, new_path);
+        TreeNode *tn_first = dynamic_cast<TreeNode *>(first_child);
+        TreeNode *tn_second = dynamic_cast<TreeNode *>(second_child);
+        diff(tn_first, tn_second, summary, new_path);
       }
     } else {
-      // both exist
-      std::string ft = typeOf(first_child);
-      std::string st = typeOf(second_child);
+      std::string ft = first_child->typeName();
+      std::string st = second_child->typeName();
 
       if (ft == "blob" || st == "blob") {
         if (first_child->hash != second_child->hash) {
@@ -589,16 +554,18 @@ void treeDiff(
           }
         }
       } else {
-        treeDiff(first_child, second_child, summary, new_path);
+        TreeNode *tn_first = dynamic_cast<TreeNode *>(first_child);
+        TreeNode *tn_second = dynamic_cast<TreeNode *>(second_child);
+        diff(tn_first, tn_second, summary, new_path);
       }
     }
   }
 }
 
-void buildWorkingDirectoryFromTreeDiff(
-    std::unordered_map<std::string,
-                       std::vector<std::pair<Object *, std::string>>> &diff) {
-  std::string repo_root = arkDir();
+void Tree::buildFromDiff(
+    std::unordered_map<std::string, std::vector<std::pair<Object *, std::string>>> &diff) {
+  Repository repo;
+  std::string repo_root = repo.root();
 
   if (diff.find("delete") != diff.end()) {
     for (const auto &[obj, path] : diff["delete"]) {

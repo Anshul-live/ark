@@ -12,7 +12,8 @@ int cmd_status(const std::vector<std::string> &args){
 bool status() {
     bool clean = true;
 
-    auto working_directory = loadWorkingDirectoryWithoutIgnored();
+    Repository repo;
+    auto working_directory = repo.loadWorkingDirectoryWithoutIgnored();
 
     Index idx;
     idx.load();

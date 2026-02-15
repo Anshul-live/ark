@@ -8,19 +8,21 @@
 #include <log.h>
 #include <objects.h>
 #include <ref.h>
+#include <config.h>
 
 void logBranch(const std::string& branchName) {
     Ref ref;
+    Config config;
     std::string commitHash = ref.getBranchHash(branchName);
     
     int depth = -1;
     while (commitHash != NULL_HASH && (depth == -1 || depth--)) {
-        std::string content = catFile(commitHash);
-        std::vector<std::string> lines = split(content, '\n');
+        std::string content = Object::readFromDisk(commitHash);
+        std::vector<std::string> lines = config.split(content, '\n');
         std::vector<std::string> data;
         std::cout << "\033[1;33mcommit: " << commitHash << "\033[0m\n";
         for (auto line : lines) {
-            std::vector<std::string> temp = split(line, ' ');
+            std::vector<std::string> temp = config.split(line, ' ');
             data.insert(data.end(), temp.begin(), temp.end());
         }
         commitHash = data[3];

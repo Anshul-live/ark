@@ -5,6 +5,4 @@
 
 int cmd_commitTree(const std::vector<std::string> &args);
 
-std::string commitTree(const std::string& tree_hash,const std::string& parent1_hash,const std::string& parent2_hash,const std::string& message);
-
 #endif // !COMMITTREE_HAPP
