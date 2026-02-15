@@ -2,10 +2,14 @@
 #include <logger.h>
 #include <exceptions.h>
 #include <ark.h>
+#include <config.h>
+#include <hash-object.h>
 #include <sys/stat.h>
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <sstream>
+#include <cmath>
 
 Repository::Repository() : rootCached(false) {}
 
@@ -35,6 +39,10 @@ std::string Repository::root() const {
         }
     }
     return cachedRoot;
+}
+
+std::string Repository::arkPath() const {
+    return root() + "/.ark";
 }
 
 std::string Repository::findRoot() const {
@@ -165,7 +173,13 @@ std::unordered_set<std::string> Repository::loadIgnorePatterns() const {
             std::ifstream in(ignoreFile);
             std::string line;
             while (std::getline(in, line)) {
-                line = trim(line);
+                size_t start = line.find_first_not_of(" \t\r\n");
+                if (start == std::string::npos) {
+                    line = "";
+                } else {
+                    size_t end = line.find_last_not_of(" \t\r\n");
+                    line = line.substr(start, end - start + 1);
+                }
                 if (line.empty() || line[0] == '#') {
                     continue;
                 }
@@ -212,4 +226,79 @@ bool Repository::isIgnored(const std::string& path) const {
         }
     }
     return false;
+}
+
+std::string Repository::getTimezoneOffset() const {
+    auto now = std::chrono::system_clock::now();
+    std::time_t t = std::chrono::system_clock::to_time_t(now);
+
+    std::tm utc_tm = *std::gmtime(&t);
+    std::tm local_tm = *std::localtime(&t);
+
+    auto diff = std::mktime(&local_tm) - std::mktime(&utc_tm);
+
+    int hours   = diff / 3600;
+    int minutes = (std::abs(diff) % 3600) / 60;
+
+    std::ostringstream oss;
+    oss << (diff >= 0 ? '+' : '-')
+        << std::setw(2) << std::setfill('0') << std::abs(hours)
+        << std::setw(2) << std::setfill('0') << minutes;
+
+    return oss.str();
+}
+
+std::unordered_map<std::string, Blob*> Repository::loadWorkingDirectory() const {
+    std::unordered_map<std::string, Blob*> blobs;
+    std::vector<std::string> paths;
+    paths.push_back(root());
+    
+    for (size_t i = 0; i < paths.size(); i++) {
+        std::string path = paths[i];
+        std::filesystem::path relPath = std::filesystem::relative(path, root());
+        
+        if (std::filesystem::is_regular_file(path)) {
+            Blob* blob = Blob::fromFile(path);
+            blobs[relPath.string()] = blob;
+        } else if (std::filesystem::is_directory(path)) {
+            if (relPath.string() == ".ark")
+                continue;
+            for (const auto& entry : std::filesystem::directory_iterator(path)) {
+                paths.push_back(entry.path().string());
+            }
+        }
+    }
+    return blobs;
+}
+
+std::unordered_map<std::string, Blob*> Repository::loadWorkingDirectoryWithoutIgnored() const {
+    std::unordered_map<std::string, Blob*> blobs;
+    std::vector<std::string> paths;
+    paths.push_back(root());
+    
+    for (size_t i = 0; i < paths.size(); i++) {
+        std::filesystem::path path = std::filesystem::absolute(paths[i]);
+        std::string genericPath = normalizePath(path);
+        
+        if (isIgnored(genericPath)) {
+            continue;
+        }
+        
+        if (!std::filesystem::exists(path)) {
+            continue;
+        }
+        
+        if (std::filesystem::is_regular_file(path)) {
+            Blob* blob = Blob::fromFile(path);
+            blobs[std::filesystem::relative(path, root()).string()] = blob;
+        } else if (std::filesystem::is_directory(path)) {
+            if (isIgnored(genericPath + "/")) {
+                continue;
+            }
+            for (const auto& entry : std::filesystem::directory_iterator(path)) {
+                paths.push_back(entry.path().string());
+            }
+        }
+    }
+    return blobs;
 }

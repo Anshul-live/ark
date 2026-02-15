@@ -40,10 +40,10 @@ int cmd_switch(const std::vector<std::string> &args) {
     targetCommit.loadFromDisk(targetCommitHash);
 
     std::unordered_map<std::string, std::vector<std::pair<Object*, std::string>>> diff;
-    treeDiff(sourceCommit.tree->root, targetCommit.tree->root, diff, "");
+    Tree::diff(sourceCommit.tree->root, targetCommit.tree->root, diff, "");
 
     ref.setHeadToBranch(branchName);
-    buildWorkingDirectoryFromTreeDiff(diff);
+    Tree::buildFromDiff(diff);
 
     Index idx;
     idx.clear();

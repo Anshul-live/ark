@@ -43,7 +43,7 @@ int cmd_add(const std::vector<std::string>& args) {
         }
 
         if (std::filesystem::is_regular_file(abs_path)) {
-            Blob* blob = hashObject(abs_path);
+            Blob* blob = Blob::fromFile(abs_path);
             std::string mode = repo.getMode(abs_path);
             idx.stage(rel_norm, blob->hash, mode);
             blob->writeObjectToDisk();

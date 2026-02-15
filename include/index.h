@@ -27,6 +27,9 @@ public:
     size_t size() const;
     void clear();
 
+    std::unordered_map<std::string, std::pair<std::string, std::string>> toMap() const;
+    void fromMap(const std::unordered_map<std::string, std::pair<std::string, std::string>>& map);
+
 private:
     std::unordered_map<std::string, IndexEntry> entries;
 };

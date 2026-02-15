@@ -101,24 +101,24 @@ void Config::loadFromFile(const std::string& path) {
     std::string sectionName;
     std::string line;
     while (getline(in, line)) {
-        line = trim(line);
+        line = this->trim(line);
         if (line.empty() || line[0] == ';') {
             continue;
         }
 
         if (line[0] == '[') {
-            sectionName = removeCharacters(line, "[]\"");
-            sectionName = removeExtraSpaces(sectionName);
-            sectionName = replaceChar(sectionName, ' ', '.');
-            sectionName = trim(sectionName);
+            sectionName = this->removeCharacters(line, "[]\"");
+            sectionName = this->removeExtraSpaces(sectionName);
+            sectionName = this->replaceChar(sectionName, ' ', '.');
+            sectionName = this->trim(sectionName);
         } else if (line[0] >= 'a' && line[0] <= 'z') {
-            std::vector<std::string> content = split(line, '=');
+            std::vector<std::string> content = this->split(line, '=');
             if (content.size() != 2) {
                 LOG_WARNING("Invalid config line format: " + line);
                 continue;
             }
-            std::string fieldName = trim(content[0]);
-            std::string value = trim(removeCharacters(content[1], "\""));
+            std::string fieldName = this->trim(content[0]);
+            std::string value = this->trim(this->removeCharacters(content[1], "\""));
             data[sectionName][fieldName].push_back(value);
         }
     }

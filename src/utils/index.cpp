@@ -108,3 +108,20 @@ void Index::remove(const std::string& path) {
 void Index::setAll(const std::unordered_map<std::string, IndexEntry>& newEntries) {
     entries = newEntries;
 }
+
+std::unordered_map<std::string, std::pair<std::string, std::string>> Index::toMap() const {
+    std::unordered_map<std::string, std::pair<std::string, std::string>> result;
+    for (const auto& [path, entry] : entries) {
+        result[path] = {entry.hash, entry.mode};
+    }
+    return result;
+}
+
+void Index::fromMap(const std::unordered_map<std::string, std::pair<std::string, std::string>>& map) {
+    for (const auto& [path, pair] : map) {
+        IndexEntry entry;
+        entry.hash = pair.first;
+        entry.mode = pair.second;
+        entries[path] = entry;
+    }
+}
