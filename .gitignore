@@ -1,7 +1,45 @@
-.ark
-.arkignore
-build/*
+# Build artifacts
+build/
 !build/.gitkeep
-run
+
+# Compiled files
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+CMakeLists.txt.user
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
 testing/
 temp-repo/
+*.test
+
+# Ark test repos (from tests)
+/tmp/ark-*
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+
+# Logs
+*.log

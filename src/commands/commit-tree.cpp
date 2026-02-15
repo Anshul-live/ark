@@ -1,4 +1,5 @@
 #include <commit-tree.h>
+#include <repository.h>
 
 int cmd_commitTree(const std::vector<std::string> &args){
   int argc = args.size();
@@ -9,14 +10,15 @@ int cmd_commitTree(const std::vector<std::string> &args){
         std::string parent1_hash = argc > 1 ? args[2] : "";
         std::string parent2_hash = argc > 2 ? args[3] : "";
         std::string message = argc > 3 ? args[4] : "";
-        std::cout<<commitTree(args[0],parent1_hash,parent2_hash,message);
+        std::cout << commitTree(args[0], parent1_hash, parent2_hash, message);
+        return 0;
 }
 
 std::string commitTree(const std::string& tree_hash,const std::string& parent1_hash,const std::string& parent2_hash,const std::string& message){
   Commit* commit = new Commit();
   commit->tree->buildFromIndex();
-  std::string ark_path = arkDir();
-  std::string index_file_path = ark_path + "/.ark/index";
+  Repository repo;
+  std::string index_file_path = repo.indexPath();
 
       std::ostringstream buffer;
       buffer << "tree "<< tree_hash << "\n";

@@ -4,8 +4,9 @@
 #include <filesystem>
 #include <fstream>
 #include <switch.h>
-#include <head.h>
+#include <ref.h>
 #include <objects.h>
+#include <repository.h>
 
 int cmd_switch(const std::vector<std::string> &args) {
     if (args.size() < 1) {
@@ -13,50 +14,52 @@ int cmd_switch(const std::vector<std::string> &args) {
         return 1;
     }
 
-    const std::string& branch_name = args[0];
-    std::string repo_root = arkDir();
-    std::string branch_path = repo_root + "/.ark/refs/heads/" + branch_name;
-
-    if (!(std::filesystem::exists(branch_path) && std::filesystem::is_regular_file(branch_path))) {
-        std::cerr << "branch " << branch_name << " does not exist\n";
+    const std::string& branchName = args[0];
+    Ref ref;
+    
+    if (!ref.branchExists(branchName)) {
+        std::cerr << "branch " << branchName << " does not exist\n";
         return 1;
     }
 
-    std::string source_commit_hash = getHead();
-    std::string target_commit_hash = getBranchHash(branch_name);
-    std::string source_branch_name = getHeadBranchName();
+    std::string sourceCommitHash = ref.getHeadCommit();
+    std::string targetCommitHash = ref.getBranchHash(branchName);
+    std::string sourceBranchName = ref.getCurrentBranchName();
 
-    if (!isHeadDetached() && source_branch_name == branch_name) {
-        std::cerr << "already on branch " << branch_name << "\n";
+    if (!ref.isDetached() && sourceBranchName == branchName) {
+        std::cerr << "already on branch " << branchName << "\n";
         return 0;
     }
 
-    Commit source_commit;
-    source_commit.loadFromDisk(source_commit_hash);
+    Commit sourceCommit;
+    if (!sourceCommitHash.empty()) {
+        sourceCommit.loadFromDisk(sourceCommitHash);
+    }
 
-    Commit target_commit;
-    target_commit.loadFromDisk(target_commit_hash);
+    Commit targetCommit;
+    targetCommit.loadFromDisk(targetCommitHash);
 
     std::unordered_map<std::string, std::vector<std::pair<Object*, std::string>>> diff;
-    treeDiff(source_commit.tree->root, target_commit.tree->root, diff, "");
+    treeDiff(sourceCommit.tree->root, targetCommit.tree->root, diff, "");
 
-    updateHead(branch_name);
+    ref.setHeadToBranch(branchName);
     buildWorkingDirectoryFromTreeDiff(diff);
 
     Index idx;
-    idx.entries.clear();
+    idx.clear();
 
-    auto flat = target_commit.tree->flatten();
+    auto flat = targetCommit.tree->flatten();
+    std::unordered_map<std::string, IndexEntry> newEntries;
     for (auto& [path, pair] : flat) {
         IndexEntry entry;
         entry.hash = pair.first;
         entry.mode = pair.second;
-        idx.entries[path] = entry;
+        newEntries[path] = entry;
     }
+    idx.setAll(newEntries);
 
     idx.save();
 
-    std::cout << "switched branch to " << branch_name << "\n";
+    std::cout << "switched branch to " << branchName << "\n";
     return 0;
 }
-
