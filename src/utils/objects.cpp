@@ -1,7 +1,9 @@
 // represents a single file
+#include <_stdio.h>
 #include <ark.h>
 #include <cat-file.h>
 #include <compress.h>
+#include <config.h>
 #include <filesystem>
 #include <fstream>
 #include <hash-object.h>
@@ -10,10 +12,9 @@
 #include <iostream>
 #include <objects.h>
 #include <openssl/sha.h>
+#include <repository.h>
 #include <sstream>
 #include <string>
-#include <repository.h>
-#include <config.h>
 
 Blob::Blob(const std::string &filename) {
   std::ifstream file(filename, std::ios::binary);
@@ -32,9 +33,7 @@ Blob::Blob(const std::string &filename) {
   this->hash = this->getSha256();
 }
 
-Blob* Blob::fromFile(const std::string& filename) {
-  return new Blob(filename);
-}
+Blob *Blob::fromFile(const std::string &filename) { return new Blob(filename); }
 
 void Blob::loadFromDisk(const std::string &hash) {
   std::string content = Object::readFromDisk(hash);
@@ -250,8 +249,8 @@ void Tree::writeTreeToDisk(TreeNode *root) {
   root->writeObjectToDisk();
 }
 
-Tree* Tree::write() {
-  Tree* t = new Tree();
+Tree *Tree::write() {
+  Tree *t = new Tree();
   t->buildFromIndex();
   t->writeTreeToDisk(t->root);
   return t;
@@ -350,6 +349,30 @@ Commit::Commit(const std::string &message, const std::string &parent1_hash,
   this->hash = this->getSha256();
 }
 
+bool starts_with(std::string str, std::string prefix) {
+  if (prefix.size() > str.size())
+    return false;
+
+  if (str.substr(0, prefix.size()) != prefix)
+    return false;
+  return true;
+}
+
+std::vector<std::string> split(std::string s, char delimiter) {
+  std::vector<std::string> tokens;
+  std::string token;
+  for (char c : s) {
+    if (c == delimiter) {
+      tokens.push_back(token);
+      token = "";
+    } else {
+      token.push_back(c);
+    }
+  }
+  tokens.push_back(token);
+  return tokens;
+}
+
 void Commit::loadFromDisk(const std::string &hash) {
   if (hash == NULL_HASH)
     return;
@@ -359,30 +382,43 @@ void Commit::loadFromDisk(const std::string &hash) {
   getline(content_stream, line);
   Config config;
   std::vector<std::string> tree_info = config.split(line, ' ');
+
+  parents.clear();
+  line.clear();
+  getline(content_stream, line);
+  while (starts_with(line, "parent")) {
+    std::vector<std::string> values = split(line, ' ');
+    parents.push_back(values[1]);
+    line.clear();
+    getline(content_stream, line);
+  }
   this->tree->root->loadFromDisk(tree_info[1]);
 }
 
-Commit* Commit::create(const std::string& treeHash, const std::string& parent1Hash, 
-                      const std::string& parent2Hash, const std::string& message) {
-  Commit* commit = new Commit();
-  
+Commit *Commit::create(const std::string &treeHash,
+                       const std::string &parent1Hash,
+                       const std::string &parent2Hash,
+                       const std::string &message) {
+  Commit *commit = new Commit();
+
   commit->tree = new Tree();
   commit->tree->root->loadFromDisk(treeHash);
-  
+
   Config config;
   config.load();
   if (!config.hasUserConfig()) {
     std::cerr << "please provide user.name and user.email before committing.\n";
     exit(0);
   }
-  
+
   std::string name = config.getUserName();
   std::string email = config.getUserEmail();
-  long long timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  
+  long long timestamp =
+      std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
   Repository repo;
   std::string timezone_offset = repo.getTimezoneOffset();
-  
+
   std::ostringstream buffer;
   buffer << "tree " << treeHash << "\n";
   if (!parent1Hash.empty()) {
@@ -391,35 +427,37 @@ Commit* Commit::create(const std::string& treeHash, const std::string& parent1Ha
   if (!parent2Hash.empty()) {
     buffer << "parent " << parent2Hash << "\n";
   }
-  buffer << "committer " << name << " <" << email << "> " << timestamp << " " << timezone_offset << "\n";
+  buffer << "committer " << name << " <" << email << "> " << timestamp << " "
+         << timezone_offset << "\n";
   buffer << message << "\n";
-  
+
   std::string raw_content = buffer.str();
-  commit->content = "commit " + std::to_string(raw_content.size()) + std::string("\0", 1) + raw_content;
+  commit->content = "commit " + std::to_string(raw_content.size()) +
+                    std::string("\0", 1) + raw_content;
   commit->hash = commit->getSha256();
   commit->writeObjectToDisk();
-  
+
   return commit;
 }
 
-std::string Object::readFromDisk(const std::string& hash) {
+std::string Object::readFromDisk(const std::string &hash) {
   Repository repo;
   std::string object_dir = repo.objectsDir() + "/" + hash.substr(0, 2) + "/";
   std::string object_file = object_dir + hash.substr(2);
-  
+
   if (!std::filesystem::exists(object_file)) {
     return "";
   }
-  
+
   std::ifstream in(object_file, std::ios::binary);
   if (!in) {
     return "";
   }
-  
+
   std::ostringstream buffer;
   buffer << in.rdbuf();
   std::string compressed = buffer.str();
-  
+
   return decompressObject(compressed);
 }
 
@@ -466,11 +504,11 @@ void Object::writeObjectToDisk() {
 }
 
 std::string Object::typeName() const {
-  if (dynamic_cast<Blob *>(const_cast<Object*>(this)))
+  if (dynamic_cast<Blob *>(const_cast<Object *>(this)))
     return "blob";
-  else if (dynamic_cast<TreeNode *>(const_cast<Object*>(this)))
+  else if (dynamic_cast<TreeNode *>(const_cast<Object *>(this)))
     return "tree";
-  else if (dynamic_cast<Commit *>(const_cast<Object*>(this)))
+  else if (dynamic_cast<Commit *>(const_cast<Object *>(this)))
     return "commit";
   else
     return "object";
@@ -478,7 +516,8 @@ std::string Object::typeName() const {
 
 void Tree::diff(
     TreeNode *first, TreeNode *second,
-    std::unordered_map<std::string, std::vector<std::pair<Object *, std::string>>> &summary,
+    std::unordered_map<std::string,
+                       std::vector<std::pair<Object *, std::string>>> &summary,
     const std::string &path) {
   if (!first && !second) {
     return;
@@ -522,8 +561,7 @@ void Tree::diff(
     Object *first_child =
         (first->children.count(key) ? first->children[key] : nullptr);
     Object *second_child =
-        (second->children.count(key) ? second->children[key]
-                                      : nullptr);
+        (second->children.count(key) ? second->children[key] : nullptr);
 
     std::string new_path = path + key + "/";
 
@@ -563,7 +601,8 @@ void Tree::diff(
 }
 
 void Tree::buildFromDiff(
-    std::unordered_map<std::string, std::vector<std::pair<Object *, std::string>>> &diff) {
+    std::unordered_map<std::string,
+                       std::vector<std::pair<Object *, std::string>>> &diff) {
   Repository repo;
   std::string repo_root = repo.root();
 
