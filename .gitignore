@@ -1,6 +1,7 @@
 # Build artifacts
 build/
 !build/.gitkeep
+compile_commands.json
 
 # Compiled files
 *.o
