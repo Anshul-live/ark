@@ -29,6 +29,7 @@ void logBranch(const std::string &branchName) {
     if (commit_hashes_queue.empty())
       break;
     commitHash = commit_hashes_queue.front();
+    commit_hashes_queue.pop();
   }
 }
 
