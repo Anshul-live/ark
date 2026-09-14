@@ -2,7 +2,8 @@
 build/
 !build/.gitkeep
 compile_commands.json
-graphify-out/*
+graphify-out/cost.json
+graphify-out/cache/
 
 # Compiled files
 *.o
