@@ -1,7 +1,7 @@
 #include "support/ark_test.h"
 
-#include <config.h>
-#include <init.h>
+#include <ark/repo/config.h>
+#include <ark/cli/commands.h>
 
 #include <cstdlib>
 

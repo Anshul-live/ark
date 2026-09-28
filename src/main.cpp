@@ -2,24 +2,13 @@
 #include <string>
 #include <vector>
 
-#include <add.h>
-#include <ark.h>
-#include <branch.h>
-#include <cat-file.h>
-#include <commit-tree.h>
-#include <commit.h>
-#include <exceptions.h>
+#include <ark/cli/commands.h>
+#include <ark/cli/commit_message_editor.h>
+#include <ark/core/exceptions.h>
 #include <functional>
-#include <hash-object.h>
-#include <init.h>
-#include <log.h>
-#include <logger.h>
-#include <repository.h>
-#include <status.h>
-#include <switch.h>
+#include <ark/util/logger.h>
+#include <ark/repo/repository.h>
 #include <unordered_map>
-#include <update-ref.h>
-#include <write-tree.h>
 
 using CommandFn = std::function<int(const std::vector<std::string> &)>;
 

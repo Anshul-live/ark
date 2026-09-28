@@ -1,8 +1,8 @@
 #include "support/ark_test.h"
 
-#include <index.h>
-#include <init.h>
-#include <objects.h>
+#include <ark/repo/index.h>
+#include <ark/cli/commands.h>
+#include <ark/objects/objects.h>
 
 using namespace arktest;
 

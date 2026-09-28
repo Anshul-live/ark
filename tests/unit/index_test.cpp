@@ -1,7 +1,7 @@
 #include "support/ark_test.h"
 
-#include <index.h>
-#include <init.h>
+#include <ark/repo/index.h>
+#include <ark/cli/commands.h>
 
 using namespace arktest;
 

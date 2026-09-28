@@ -1,8 +1,8 @@
 #include "support/ark_test.h"
 
-#include <exceptions.h>
-#include <init.h>
-#include <repository.h>
+#include <ark/core/exceptions.h>
+#include <ark/cli/commands.h>
+#include <ark/repo/repository.h>
 
 #include <regex>
 

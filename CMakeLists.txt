@@ -27,27 +27,27 @@ find_package(ZLIB REQUIRED)
 
 # Everything except main() lives in a library so the CLI and the tests share one build.
 add_library(ark_core STATIC
-    src/commands/init.cpp
-    src/commands/hash-object.cpp
-    src/commands/cat-file.cpp
-    src/commands/write-tree.cpp
-    src/commands/commit-tree.cpp
-    src/commands/add.cpp
-    src/commands/commit.cpp
-    src/commands/branch.cpp
-    src/commands/switch.cpp
-    src/commands/log.cpp
-    src/commands/status.cpp
-    src/commands/update-ref.cpp
+    src/cli/commands/init.cpp
+    src/cli/commands/hash_object.cpp
+    src/cli/commands/cat_file.cpp
+    src/cli/commands/write_tree.cpp
+    src/cli/commands/commit_tree.cpp
+    src/cli/commands/add.cpp
+    src/cli/commands/commit.cpp
+    src/cli/commands/branch.cpp
+    src/cli/commands/switch.cpp
+    src/cli/commands/log.cpp
+    src/cli/commands/status.cpp
+    src/cli/commands/update_ref.cpp
+    src/cli/commit_message_editor.cpp
 
-    src/utils/compress.cpp
-    src/utils/objects.cpp
-    src/utils/ark.cpp
-    src/utils/index.cpp
-    src/utils/config.cpp
-    src/utils/repository.cpp
-    src/utils/ref.cpp
-    src/utils/logger.cpp
+    src/storage/compression.cpp
+    src/objects/objects.cpp
+    src/repo/index.cpp
+    src/repo/config.cpp
+    src/repo/repository.cpp
+    src/repo/ref.cpp
+    src/util/logger.cpp
 )
 target_include_directories(ark_core PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(ark_core PUBLIC OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB)
