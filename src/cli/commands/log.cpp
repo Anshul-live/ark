@@ -1,6 +1,6 @@
 #include <ark/cli/commit_message_editor.h>
 #include <ark/cli/commands.h>
-#include <ark/repo/config.h>
+#include <ark/util/strings.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -12,13 +12,12 @@
 
 void logBranch(const std::string &branchName) {
   Ref ref;
-  Config config;
   std::string commitHash = ref.getBranchHash(branchName);
   std::queue<std::string> commit_hashes_queue;
 
   while (commitHash != NULL_HASH) {
     std::string content = Object::readFromDisk(commitHash);
-    std::vector<std::string> lines = config.split(content, '\n');
+    std::vector<std::string> lines = ark::text::split(content, '\n');
     std::vector<std::string> data;
     std::cout << "\033[1;33mcommit: " << commitHash << "\033[0m\n";
     Commit c;

@@ -1,11 +1,12 @@
 #include <ark/cli/commit_message_editor.h>
+#include <ark/util/fs.h>
 #include <string>
+#include <filesystem>
 #include <fstream>
-#include <sstream>
 #include <iostream>
 #include <cstdlib>
 
-std::string getEditor() {
+std::string CommitMessageEditor::resolveEditorCommand() {
     const char* editor = std::getenv("GIT_EDITOR");
     if (!editor) editor = std::getenv("VISUAL");
     if (!editor) editor = std::getenv("EDITOR");
@@ -13,7 +14,7 @@ std::string getEditor() {
     return std::string(editor);
 }
 
-void openEditor(const std::string& editor, const std::string& file) {
+void CommitMessageEditor::runEditor(const std::string& editor, const std::string& file) {
     std::string cmd = editor + " " + file;
     int ret = std::system(cmd.c_str());
     if (ret != 0) {
@@ -21,24 +22,17 @@ void openEditor(const std::string& editor, const std::string& file) {
     }
 }
 
-std::string createTempFile() {
+std::string CommitMessageEditor::createMessageFile() {
     std::string temp_file = std::filesystem::temp_directory_path() / "ark_commit_msg.txt";
     std::ofstream temp(temp_file);
     return temp_file;
 }
 
-std::string readFileContent(const std::string& file) {
-    std::ifstream in(file);
-    std::ostringstream buffer;
-    buffer << in.rdbuf();
-    return buffer.str();
-}
-
-std::string getCommitMessageFromEditor() {
-    std::string editor = getEditor();
-    std::string tempFile = createTempFile();
-    openEditor(editor, tempFile);
-    std::string message = readFileContent(tempFile);
+std::string CommitMessageEditor::prompt() {
+    std::string editor = resolveEditorCommand();
+    std::string tempFile = createMessageFile();
+    runEditor(editor, tempFile);
+    std::string message = ark::readFileToString(tempFile);
     std::filesystem::remove(tempFile);
     return message;
 }

@@ -3,6 +3,8 @@
 #include <ark/core/exceptions.h>
 #include <ark/cli/commands.h>
 #include <ark/repo/repository.h>
+#include <ark/util/fs.h>
+#include <ark/util/time.h>
 
 #include <regex>
 
@@ -69,13 +71,12 @@ TEST_F(RepositoryTest, ModeReflectsFileType) {
 }
 
 TEST_F(RepositoryTest, NormalizePath) {
-  Repository repo;
-  EXPECT_EQ(repo.normalizePath("a/./b/../c"), "a/c");
-  EXPECT_EQ(repo.normalizePath("a//b"), "a/b");
+  EXPECT_EQ(ark::normalizeGenericPath("a/./b/../c"), "a/c");
+  EXPECT_EQ(ark::normalizeGenericPath("a//b"), "a/b");
 }
 
 TEST_F(RepositoryTest, TimezoneOffsetFormat) {
-  EXPECT_TRUE(std::regex_match(Repository().getTimezoneOffset(),
+  EXPECT_TRUE(std::regex_match(ark::formatLocalUtcOffset(),
                                std::regex("^[+-][0-9]{4}$")));
 }
 

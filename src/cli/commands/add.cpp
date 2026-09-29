@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <ark/repo/repository.h>
 #include <ark/repo/index.h>
+#include <ark/util/fs.h>
 
 int cmd_add(const std::vector<std::string>& args) {
     if(args.size() < 1){
@@ -29,8 +30,8 @@ int cmd_add(const std::vector<std::string>& args) {
         std::filesystem::path abs_path = std::filesystem::absolute(paths[i]);
         std::filesystem::path rel_path = std::filesystem::relative(abs_path, repo.root());
 
-        std::string abs_norm  = repo.normalizePath(abs_path.string());
-        std::string rel_norm  = repo.normalizePath(rel_path.string()); 
+        std::string abs_norm  = ark::normalizeGenericPath(abs_path.string());
+        std::string rel_norm  = ark::normalizeGenericPath(rel_path.string()); 
 
         if (repo.isIgnored(abs_norm)) {
             continue;

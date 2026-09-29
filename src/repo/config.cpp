@@ -3,6 +3,7 @@
 #include <ark/util/logger.h>
 #include <ark/core/exceptions.h>
 #include <ark/cli/commit_message_editor.h>
+#include <ark/util/strings.h>
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -101,93 +102,26 @@ void Config::loadFromFile(const std::string& path) {
     std::string sectionName;
     std::string line;
     while (getline(in, line)) {
-        line = this->trim(line);
+        line = ark::text::trim(line);
         if (line.empty() || line[0] == ';') {
             continue;
         }
 
         if (line[0] == '[') {
-            sectionName = this->removeCharacters(line, "[]\"");
-            sectionName = this->removeExtraSpaces(sectionName);
-            sectionName = this->replaceChar(sectionName, ' ', '.');
-            sectionName = this->trim(sectionName);
+            sectionName = ark::text::removeChars(line, "[]\"");
+            sectionName = ark::text::collapseSpaces(sectionName);
+            sectionName = ark::text::replaceChar(sectionName, ' ', '.');
+            sectionName = ark::text::trim(sectionName);
         } else if (line[0] >= 'a' && line[0] <= 'z') {
-            std::vector<std::string> content = this->split(line, '=');
+            std::vector<std::string> content = ark::text::split(line, '=');
             if (content.size() != 2) {
                 LOG_WARNING("Invalid config line format: " + line);
                 continue;
             }
-            std::string fieldName = this->trim(content[0]);
-            std::string value = this->trim(this->removeCharacters(content[1], "\""));
+            std::string fieldName = ark::text::trim(content[0]);
+            std::string value = ark::text::trim(ark::text::removeChars(content[1], "\""));
             data[sectionName][fieldName].push_back(value);
         }
     }
     in.close();
-}
-
-std::string Config::trim(const std::string& s) const {
-    size_t start = s.find_first_not_of(" \t\r\n");
-    if (start == std::string::npos) {
-        return "";
-    }
-    size_t end = s.find_last_not_of(" \t\r\n");
-    return s.substr(start, end - start + 1);
-}
-
-std::string Config::toLower(const std::string& s) const {
-    std::string result = s;
-    std::transform(result.begin(), result.end(), result.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    return result;
-}
-
-std::vector<std::string> Config::split(const std::string& s, char delimiter) const {
-    std::vector<std::string> tokens;
-    std::string token;
-    std::istringstream tokenStream(s);
-    while (std::getline(tokenStream, token, delimiter)) {
-        tokens.push_back(token);
-    }
-    return tokens;
-}
-
-std::string Config::removeCharacters(const std::string& s, const std::string& chars) const {
-    std::unordered_set<char> charSet(chars.begin(), chars.end());
-    std::string result;
-    for (char c : s) {
-        if (!charSet.count(c)) {
-            result += c;
-        }
-    }
-    return result;
-}
-
-std::string Config::removeExtraSpaces(const std::string& s) const {
-    std::string result;
-    int count = 0;
-    for (size_t i = 0; i < s.length(); i++) {
-        char el = s[i];
-        if (el == ' ') {
-            if (count <= 1) {
-                result.push_back(el);
-                count++;
-            }
-            continue;
-        }
-        count = 0;
-        result.push_back(el);
-    }
-    return result;
-}
-
-std::string Config::replaceChar(const std::string& s, char original, char replacement) const {
-    std::string result;
-    for (char c : s) {
-        if (c == original) {
-            result.push_back(replacement);
-        } else {
-            result.push_back(c);
-        }
-    }
-    return result;
 }

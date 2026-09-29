@@ -17,9 +17,6 @@ public:
   Repository();
   ~Repository();
 
-  void initialize();
-  void initialize(const std::string &logPath);
-
   std::string root() const;
   std::string arkPath() const;
   std::string objectsDir() const;
@@ -31,13 +28,10 @@ public:
 
   bool isValid() const;
 
-  std::string normalizePath(const std::string &path) const;
   std::string getMode(const std::filesystem::path &path) const;
 
   std::unordered_set<std::string> loadIgnorePatterns() const;
   bool isIgnored(const std::string &path) const;
-
-  std::string getTimezoneOffset() const;
 
   std::unordered_map<std::string, Blob *>
   loadWorkingDirectoryWithoutIgnored() const;

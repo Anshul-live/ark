@@ -7,7 +7,9 @@
 #include <ark/cli/commands.h>
 #include <ark/objects/objects.h>
 #include <iostream>
+#include <ark/util/fs.h>
 #include <ark/util/logger.h>
+#include <ark/util/strings.h>
 #include <ark/repo/repository.h>
 #include <sstream>
 #include <sys/stat.h>
@@ -15,17 +17,6 @@
 Repository::Repository() : rootCached(false) {}
 
 Repository::~Repository() {}
-
-void Repository::initialize() { initialize(""); }
-
-void Repository::initialize(const std::string &logPath) {
-  try {
-    std::string path = logPath.empty() ? ".ark.log" : logPath;
-    Logger::instance().init(path);
-  } catch (const std::exception &e) {
-    std::cerr << "Failed to initialize logger: " << e.what() << std::endl;
-  }
-}
 
 std::string Repository::root() const {
   if (!rootCached) {
@@ -124,10 +115,6 @@ std::string Repository::logPath() const {
   }
 }
 
-std::string Repository::normalizePath(const std::string &path) const {
-  return std::filesystem::path(path).lexically_normal().generic_string();
-}
-
 std::string Repository::getMode(const std::filesystem::path &path) const {
   struct stat st;
   if (lstat(path.c_str(), &st) != 0) {
@@ -168,17 +155,11 @@ std::unordered_set<std::string> Repository::loadIgnorePatterns() const {
       std::ifstream in(ignoreFile);
       std::string line;
       while (std::getline(in, line)) {
-        size_t start = line.find_first_not_of(" \t\r\n");
-        if (start == std::string::npos) {
-          line = "";
-        } else {
-          size_t end = line.find_last_not_of(" \t\r\n");
-          line = line.substr(start, end - start + 1);
-        }
+        line = ark::text::trim(line);
         if (line.empty() || line[0] == '#') {
           continue;
         }
-        patterns.insert(normalizePath(path + "/" + line));
+        patterns.insert(ark::normalizeGenericPath(path + "/" + line));
       }
       in.close();
     }
@@ -208,7 +189,7 @@ bool Repository::isIgnored(const std::string &path) const {
     }
   }
 
-  std::string normalizedPath = normalizePath(path);
+  std::string normalizedPath = ark::normalizeGenericPath(path);
 
   for (const auto &pattern : cachedPatterns) {
     if (normalizedPath == pattern) {
@@ -223,25 +204,6 @@ bool Repository::isIgnored(const std::string &path) const {
   return false;
 }
 
-std::string Repository::getTimezoneOffset() const {
-  auto now = std::chrono::system_clock::now();
-  std::time_t t = std::chrono::system_clock::to_time_t(now);
-
-  std::tm utc_tm = *std::gmtime(&t);
-  std::tm local_tm = *std::localtime(&t);
-
-  auto diff = std::mktime(&local_tm) - std::mktime(&utc_tm);
-
-  int hours = diff / 3600;
-  int minutes = (std::abs(diff) % 3600) / 60;
-
-  std::ostringstream oss;
-  oss << (diff >= 0 ? '+' : '-') << std::setw(2) << std::setfill('0')
-      << std::abs(hours) << std::setw(2) << std::setfill('0') << minutes;
-
-  return oss.str();
-}
-
 std::unordered_map<std::string, Blob *>
 Repository::loadWorkingDirectoryWithoutIgnored() const {
   std::unordered_map<std::string, Blob *> blobs;
@@ -250,7 +212,7 @@ Repository::loadWorkingDirectoryWithoutIgnored() const {
 
   for (size_t i = 0; i < paths.size(); i++) {
     std::filesystem::path path = std::filesystem::absolute(paths[i]);
-    std::string genericPath = normalizePath(path);
+    std::string genericPath = ark::normalizeGenericPath(path.string());
 
     if (isIgnored(genericPath)) {
       continue;

@@ -12,6 +12,15 @@
 
 using CommandFn = std::function<int(const std::vector<std::string> &)>;
 
+static void configureLogging() {
+  try {
+    std::string path = ".ark.log";
+    Logger::instance().init(path);
+  } catch (const std::exception &e) {
+    std::cerr << "Failed to initialize logger: " << e.what() << std::endl;
+  }
+}
+
 int main(int argc, char *argv[]) {
   try {
     if (argc < 2) {
@@ -24,7 +33,7 @@ int main(int argc, char *argv[]) {
     if (cmd != "init") {
       try {
         Repository repo;
-        repo.initialize();
+        configureLogging();
       } catch (const NotARepositoryException &) {
       } catch (const std::exception &e) {
         LOG_EXCEPTION("main", e);
@@ -59,7 +68,7 @@ int main(int argc, char *argv[]) {
     if (cmd == "init" && result == 0) {
       try {
         Repository repo;
-        repo.initialize();
+        configureLogging();
       } catch (...) {
       }
     }

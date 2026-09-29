@@ -22,7 +22,7 @@ int cmd_commit(const std::vector<std::string> &args) {
   if (!latestCommit || hasChanges) {
   }
 
-  std::string message = getCommitMessageFromEditor();
+  std::string message = CommitMessageEditor::prompt();
   if (message.empty()) {
     std::cerr << "commit aborted due to empty message";
     return 1;

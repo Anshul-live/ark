@@ -48,6 +48,9 @@ add_library(ark_core STATIC
     src/repo/repository.cpp
     src/repo/ref.cpp
     src/util/logger.cpp
+    src/util/strings.cpp
+    src/util/fs.cpp
+    src/util/time.cpp
 )
 target_include_directories(ark_core PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(ark_core PUBLIC OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB)

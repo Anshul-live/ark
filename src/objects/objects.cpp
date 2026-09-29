@@ -6,6 +6,8 @@
 #include <charconv>
 #include <ark/storage/compression.h>
 #include <ark/repo/config.h>
+#include <ark/util/strings.h>
+#include <ark/util/time.h>
 #include <filesystem>
 #include <fstream>
 #include <ark/repo/index.h>
@@ -120,9 +122,8 @@ void TreeNode::loadFromDisk(const std::string &node_hash) {
   std::string content = Object::stripHeaderFromObject(node_hash, raw);
   std::stringstream content_stream(content);
   std::string line;
-  Config config;
   while (getline(content_stream, line)) {
-    std::vector<std::string> line_content = config.split(line, ' ');
+    std::vector<std::string> line_content = ark::text::split(line, ' ');
     std::string mode = line_content[0];
     std::string type = line_content[1];
     std::string hash = line_content[2];
@@ -172,9 +173,8 @@ void Tree::buildFromIndex() {
   Index idx;
   idx.load();
   auto blobs = idx.toMap();
-  Config config;
   for (const auto &blob : blobs) {
-    std::vector<std::string> path = config.split(blob.first, '/');
+    std::vector<std::string> path = ark::text::split(blob.first, '/');
     std::string hash = blob.second.first;
     std::string mode = blob.second.second;
     insertBlob(root, path, 0, hash, mode);
@@ -279,7 +279,7 @@ Commit::Commit(const std::string &message, const std::string &parent_hash) {
   std::cout << "passed checks" << std::endl;
   long long timestamp =
       std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  std::string timezone_offset = repo.getTimezoneOffset();
+  std::string timezone_offset = ark::formatLocalUtcOffset();
 
   std::ostringstream buffer;
   buffer << "tree " << t->root->hash << "\n";
@@ -312,7 +312,7 @@ Commit::Commit(const std::string &message, const std::string &parent1_hash,
   std::string email = config.getUserEmail();
   long long timestamp =
       std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  std::string timezone_offset = repo.getTimezoneOffset();
+  std::string timezone_offset = ark::formatLocalUtcOffset();
 
   std::ostringstream buffer;
   buffer << "tree " << t->root->hash << "\n";
@@ -328,30 +328,6 @@ Commit::Commit(const std::string &message, const std::string &parent1_hash,
   this->hash = this->getSha256();
 }
 
-bool starts_with(std::string str, std::string prefix) {
-  if (prefix.size() > str.size())
-    return false;
-
-  if (str.substr(0, prefix.size()) != prefix)
-    return false;
-  return true;
-}
-
-std::vector<std::string> split(std::string s, char delimiter) {
-  std::vector<std::string> tokens;
-  std::string token;
-  for (char c : s) {
-    if (c == delimiter) {
-      tokens.push_back(token);
-      token = "";
-    } else {
-      token.push_back(c);
-    }
-  }
-  tokens.push_back(token);
-  return tokens;
-}
-
 void Commit::loadFromDisk(const std::string &hash) {
   if (hash == NULL_HASH)
     return;
@@ -361,13 +337,13 @@ void Commit::loadFromDisk(const std::string &hash) {
   std::string line;
   getline(content_stream, line);
   Config config;
-  std::vector<std::string> tree_info = split(line, ' ');
+  std::vector<std::string> tree_info = ark::text::splitKeepEmpty(line, ' ');
 
   parents.clear();
   line.clear();
   getline(content_stream, line);
-  while (starts_with(line, "parent")) {
-    std::vector<std::string> values = split(line, ' ');
+  while (ark::text::startsWith(line, "parent")) {
+    std::vector<std::string> values = ark::text::splitKeepEmpty(line, ' ');
     parents.push_back(values[1]);
     line.clear();
     getline(content_stream, line);
@@ -397,7 +373,7 @@ Commit *Commit::create(const std::string &treeHash,
       std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
   Repository repo;
-  std::string timezone_offset = repo.getTimezoneOffset();
+  std::string timezone_offset = ark::formatLocalUtcOffset();
 
   std::ostringstream buffer;
   buffer << "tree " << treeHash << "\n";
