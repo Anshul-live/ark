@@ -41,6 +41,12 @@ add_library(ark_core STATIC
     src/cli/commands/update_ref.cpp
     src/cli/commit_message_editor.cpp
 
+    src/core/object_hash.cpp
+    src/core/object_type.cpp
+    src/core/file_mode.cpp
+    src/core/repo_path.cpp
+    src/core/ref_name.cpp
+
     src/storage/compression.cpp
     src/objects/objects.cpp
     src/repo/index.cpp
@@ -74,6 +80,7 @@ add_executable(test_ark
     tests/unit/ref_test.cpp
     tests/unit/repository_test.cpp
     tests/unit/logger_test.cpp
+    tests/unit/core_types_test.cpp
 
     tests/cli/init_test.cpp
     tests/cli/plumbing_test.cpp
