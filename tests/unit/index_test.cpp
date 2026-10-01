@@ -1,6 +1,8 @@
 #include "support/ark_test.h"
 
 #include <ark/repo/index.h>
+#include <ark/repo/index_file.h>
+#include <sstream>
 #include <ark/cli/commands.h>
 
 using namespace arktest;
@@ -15,7 +17,15 @@ protected:
   }
   void TearDown() override { cwd_.reset(); }
 
-  static std::string fakeHash(char c) { return std::string(64, c); }
+  static ark::ObjectHash fakeHash(char c) {
+    return ark::ObjectHash::parse(std::string(64, c)).value();
+  }
+  static ark::FileEntry entry(char c, const std::string &mode) {
+    return ark::FileEntry{fakeHash(c), ark::parseFileMode(mode).value()};
+  }
+  static ark::RepoPath path(const std::string &p) {
+    return ark::RepoPath::fromRelative(p);
+  }
 
   Index reloaded() {
     Index idx;
@@ -35,73 +45,85 @@ TEST_F(IndexTest, FreshRepositoryHasEmptyIndex) {
 
 TEST_F(IndexTest, SaveThenLoadRoundTripsEveryEntry) {
   Index idx;
-  idx.stage("a.txt", fakeHash('a'), "100644");
-  idx.stage("dir/b.sh", fakeHash('b'), "100755");
-  idx.stage("dir/sub/link", fakeHash('c'), "120000");
+  idx.stage(path("a.txt"), entry('a', "100644"));
+  idx.stage(path("dir/b.sh"), entry('b', "100755"));
+  idx.stage(path("dir/sub/link"), entry('c', "120000"));
   idx.save();
 
   Index loaded = reloaded();
-  EXPECT_EQ(loaded.toMap(), idx.toMap());
+  EXPECT_EQ(loaded.entries(), idx.entries());
 }
 
 TEST_F(IndexTest, StagingSamePathReplacesEntry) {
   Index idx;
-  idx.stage("a", fakeHash('1'), "100644");
-  idx.stage("a", fakeHash('2'), "100755");
+  idx.stage(path("a"), entry('1', "100644"));
+  idx.stage(path("a"), entry('2', "100755"));
   ASSERT_EQ(idx.size(), 1u);
-  EXPECT_EQ(idx.get("a")->hash, fakeHash('2'));
-  EXPECT_EQ(idx.get("a")->mode, "100755");
+  EXPECT_EQ(idx.find(path("a"))->hash, fakeHash('2'));
+  EXPECT_EQ(idx.find(path("a"))->mode, ark::FileMode::Executable);
 }
 
-TEST_F(IndexTest, RemoveAndUnstageDropEntriesAndPersist) {
+TEST_F(IndexTest, EraseDropsEntriesAndPersists) {
   Index idx;
-  idx.stage("keep", fakeHash('k'), "100644");
-  idx.stage("gone1", fakeHash('1'), "100644");
-  idx.stage("gone2", fakeHash('2'), "100644");
-  idx.remove("gone1");
-  idx.unstage("gone2");
+  idx.stage(path("keep"), entry('a', "100644"));
+  idx.stage(path("gone1"), entry('1', "100644"));
+  idx.stage(path("gone2"), entry('2', "100644"));
+  idx.erase(path("gone1"));
+  idx.erase(path("gone2"));
   idx.save();
 
   Index loaded = reloaded();
-  EXPECT_TRUE(loaded.contains("keep"));
-  EXPECT_FALSE(loaded.contains("gone1"));
-  EXPECT_FALSE(loaded.contains("gone2"));
+  EXPECT_TRUE(loaded.contains(path("keep")));
+  EXPECT_FALSE(loaded.contains(path("gone1")));
+  EXPECT_FALSE(loaded.contains(path("gone2")));
 }
 
-TEST_F(IndexTest, GetReturnsNullForUnknownPath) {
+TEST_F(IndexTest, FindReturnsNullForUnknownPath) {
   Index idx;
-  EXPECT_EQ(idx.get("nope"), nullptr);
+  EXPECT_EQ(idx.find(path("nope")), nullptr);
 }
 
-TEST_F(IndexTest, SetAllReplacesAndFromMapMerges) {
+TEST_F(IndexTest, ReplaceAllReplacesAndStageAllMerges) {
   Index idx;
-  idx.stage("old", fakeHash('o'), "100644");
-  idx.setAll({{"new", IndexEntry{fakeHash('n'), "100644"}}});
-  EXPECT_FALSE(idx.contains("old"));
-  EXPECT_TRUE(idx.contains("new"));
+  idx.stage(path("old"), entry('e', "100644"));
+  idx.replaceAll({{path("new"), entry('d', "100644")}});
+  EXPECT_FALSE(idx.contains(path("old")));
+  EXPECT_TRUE(idx.contains(path("new")));
 
-  idx.fromMap({{"extra", {fakeHash('e'), "100755"}}});
-  EXPECT_TRUE(idx.contains("new"));
-  EXPECT_TRUE(idx.contains("extra"));
-  EXPECT_EQ(idx.get("extra")->mode, "100755");
+  idx.stageAll({{path("extra"), entry('e', "100755")}});
+  EXPECT_TRUE(idx.contains(path("new")));
+  EXPECT_TRUE(idx.contains(path("extra")));
+  EXPECT_EQ(idx.find(path("extra"))->mode, ark::FileMode::Executable);
 }
 
 TEST_F(IndexTest, ManyEntriesRoundTrip) {
   Index idx;
   for (int i = 0; i < 2000; i++) {
-    idx.stage("d" + std::to_string(i % 17) + "/f" + std::to_string(i),
-              fakeHash("0123456789abcdef"[i % 16]), i % 3 ? "100644" : "100755");
+    idx.stage(path("d" + std::to_string(i % 17) + "/f" + std::to_string(i)),
+              entry("0123456789abcdef"[i % 16], i % 3 ? "100644" : "100755"));
   }
   idx.save();
-  EXPECT_EQ(reloaded().toMap(), idx.toMap());
+  EXPECT_EQ(reloaded().entries(), idx.entries());
 }
 
 // tmp/bugs/05
 TEST_F(IndexTest, PathsWithSpacesRoundTrip) {
   Index idx;
-  idx.stage("my file.txt", fakeHash('a'), "100644");
-  idx.stage("dir with spaces/x  y.txt", fakeHash('b'), "100644");
-  idx.stage("after.txt", fakeHash('c'), "100644");
+  idx.stage(path("my file.txt"), entry('a', "100644"));
+  idx.stage(path("dir with spaces/x  y.txt"), entry('b', "100644"));
+  idx.stage(path("after.txt"), entry('c', "100644"));
   idx.save();
-  EXPECT_EQ(reloaded().toMap(), idx.toMap());
+  EXPECT_EQ(reloaded().entries(), idx.entries());
+}
+
+TEST_F(IndexTest, IndexFileWritesSortedLinesAndParsesThemBack) {
+  ark::FlatTree tree = {{path("b"), entry('b', "100755")},
+                        {path("a"), entry('a', "100644")}};
+  std::ostringstream out;
+  ark::IndexFile::write(out, tree);
+  EXPECT_EQ(out.str(), "100644 " + std::string(64, 'a') + " a\n100755 " +
+                           std::string(64, 'b') + " b\n");
+
+  std::istringstream in(out.str());
+  EXPECT_EQ(ark::IndexFile::parse(in), tree);
 }

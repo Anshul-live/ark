@@ -7,6 +7,14 @@
 using namespace arktest;
 
 namespace {
+void stageBlob(Index &idx, const std::string &path, const std::string &hash) {
+  idx.stage(ark::RepoPath::fromRelative(path),
+            ark::FileEntry{ark::ObjectHash::parse(hash).value(),
+                           ark::FileMode::Regular});
+}
+} // namespace
+
+namespace {
 
 // Runs each test inside a freshly initialised repository.
 class ObjectsTest : public ::testing::Test {
@@ -66,7 +74,7 @@ TEST_F(ObjectsTest, TreeWriteMatchesIndexContents) {
     writeFile(path, content);
     Blob blob(path);
     blob.writeObjectToDisk();
-    idx.stage(path, blob.hash, "100644");
+    stageBlob(idx, path, blob.hash);
   }
   idx.save();
 
@@ -90,7 +98,7 @@ TEST_F(ObjectsTest, LoadedTreeFlattensToFullPathsOfEveryBlob) {
     writeFile(path, content);
     Blob blob(path);
     blob.writeObjectToDisk();
-    idx.stage(path, blob.hash, "100644");
+    stageBlob(idx, path, blob.hash);
   }
   idx.save();
   const std::string treeHash = Tree::write()->root->hash;
@@ -120,7 +128,7 @@ TEST_F(ObjectsTest, TreeHashDoesNotDependOnStagingOrder) {
     for (const auto &n : order) {
       Blob blob(n);
       blob.writeObjectToDisk();
-      idx.stage(n, blob.hash, "100644");
+      stageBlob(idx, n, blob.hash);
     }
     idx.save();
     return Tree::write()->root->hash;
@@ -135,7 +143,7 @@ TEST_F(ObjectsTest, CommitCreateRecordsTreeParentsAndMessage) {
   Blob blob("f");
   blob.writeObjectToDisk();
   Index idx;
-  idx.stage("f", blob.hash, "100644");
+  stageBlob(idx, "f", blob.hash);
   idx.save();
   const std::string tree = Tree::write()->root->hash;
 

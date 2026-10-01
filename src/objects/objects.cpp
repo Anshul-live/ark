@@ -172,11 +172,10 @@ void Tree::flattenHelper(
 void Tree::buildFromIndex() {
   Index idx;
   idx.load();
-  auto blobs = idx.toMap();
-  for (const auto &blob : blobs) {
-    std::vector<std::string> path = ark::text::split(blob.first, '/');
-    std::string hash = blob.second.first;
-    std::string mode = blob.second.second;
+  for (const auto &[repoPath, entry] : idx.entries()) {
+    std::vector<std::string> path = ark::text::split(repoPath.str(), '/');
+    std::string hash = entry.hash.hex();
+    std::string mode(ark::toOctalString(entry.mode));
     insertBlob(root, path, 0, hash, mode);
   }
 }

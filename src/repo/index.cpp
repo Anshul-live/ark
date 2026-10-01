@@ -1,127 +1,97 @@
 #include <ark/repo/index.h>
-#include <ark/cli/commit_message_editor.h>
+#include <ark/repo/index_file.h>
 #include <ark/repo/repository.h>
 #include <ark/util/logger.h>
 #include <ark/core/exceptions.h>
 #include <fstream>
-#include <iostream>
-#include <filesystem>
 
 Index::Index() {}
 
-bool Index::contains(const std::string& path) const {
-    return entries.find(path) != entries.end();
+bool Index::contains(const ark::RepoPath& path) const {
+    return entries_.find(path) != entries_.end();
 }
 
-const IndexEntry* Index::get(const std::string& path) const {
-    auto it = entries.find(path);
-    return (it != entries.end()) ? &it->second : nullptr;
+const ark::FileEntry* Index::find(const ark::RepoPath& path) const {
+    auto it = entries_.find(path);
+    return (it != entries_.end()) ? &it->second : nullptr;
 }
 
-std::unordered_map<std::string, IndexEntry> Index::getEntries() const {
-    return entries;
+const ark::FlatTree& Index::entries() const {
+    return entries_;
 }
 
-size_t Index::size() const {
-    return entries.size();
+std::size_t Index::size() const {
+    return entries_.size();
 }
 
 void Index::clear() {
-    entries.clear();
+    entries_.clear();
     LOG_DEBUG("Index cleared");
 }
 
 void Index::load() {
-    entries.clear();
+    entries_.clear();
     LOG_DEBUG("Loading index");
-    
+
     try {
         Repository repo;
         std::string idxFile = repo.indexPath();
         std::ifstream in(idxFile, std::ios::binary);
-        
+
         if (!in) {
             LOG_DEBUG("No index file found, starting fresh");
             return;
         }
 
-        std::string mode, hash, path;
-        while (in >> mode >> hash >> path) {
-            IndexEntry entry;
-            entry.hash = hash;
-            entry.mode = mode;
-            entries[path] = entry;
-        }
-        in.close();
-        
-        LOG_INFO("Index loaded: " + std::to_string(entries.size()) + " entries");
+        entries_ = ark::IndexFile::parse(in);
+
+        LOG_INFO("Index loaded: " + std::to_string(entries_.size()) + " entries");
     } catch (const std::exception& e) {
         LOG_EXCEPTION("Index::load", e);
         throw IndexException(std::string("Failed to load index: ") + e.what());
     }
 }
 
-void Index::save() {
+void Index::save() const {
     LOG_DEBUG("Saving index");
-    
+
     try {
         Repository repo;
         std::string idxFile = repo.indexPath();
         std::ofstream out(idxFile, std::ios::binary);
-        
+
         if (!out) {
             LOG_ERROR("Failed to open index file for writing: " + idxFile);
             throw IndexException("Failed to open index file for writing");
         }
 
-        for (const auto& [path, entry] : entries) {
-            out << entry.mode << " " << entry.hash << " " << path << "\n";
-        }
+        ark::IndexFile::write(out, entries_);
         out.close();
-        
-        LOG_INFO("Index saved: " + std::to_string(entries.size()) + " entries");
+
+        LOG_INFO("Index saved: " + std::to_string(entries_.size()) + " entries");
     } catch (const std::exception& e) {
         LOG_EXCEPTION("Index::save", e);
         throw IndexException(std::string("Failed to save index: ") + e.what());
     }
 }
 
-void Index::stage(const std::string& path, const std::string& hash, const std::string& mode) {
-    LOG_DEBUG("Staging file: " + path + " (hash: " + hash + ", mode: " + mode + ")");
-    
-    IndexEntry entry;
-    entry.hash = hash;
-    entry.mode = mode;
-    entries[path] = entry;
+void Index::stage(const ark::RepoPath& path, ark::FileEntry entry) {
+    LOG_DEBUG("Staging file: " + path.str() + " (hash: " + entry.hash.hex() +
+              ", mode: " + std::string(ark::toOctalString(entry.mode)) + ")");
+    entries_.insert_or_assign(path, entry);
 }
 
-void Index::unstage(const std::string& path) {
-    LOG_DEBUG("Unstaging file: " + path);
-    entries.erase(path);
+void Index::erase(const ark::RepoPath& path) {
+    LOG_DEBUG("Removing from index: " + path.str());
+    entries_.erase(path);
 }
 
-void Index::remove(const std::string& path) {
-    LOG_DEBUG("Removing from index: " + path);
-    entries.erase(path);
+void Index::replaceAll(ark::FlatTree newEntries) {
+    entries_ = std::move(newEntries);
 }
 
-void Index::setAll(const std::unordered_map<std::string, IndexEntry>& newEntries) {
-    entries = newEntries;
-}
-
-std::unordered_map<std::string, std::pair<std::string, std::string>> Index::toMap() const {
-    std::unordered_map<std::string, std::pair<std::string, std::string>> result;
-    for (const auto& [path, entry] : entries) {
-        result[path] = {entry.hash, entry.mode};
-    }
-    return result;
-}
-
-void Index::fromMap(const std::unordered_map<std::string, std::pair<std::string, std::string>>& map) {
-    for (const auto& [path, pair] : map) {
-        IndexEntry entry;
-        entry.hash = pair.first;
-        entry.mode = pair.second;
-        entries[path] = entry;
+void Index::stageAll(const ark::FlatTree& newEntries) {
+    for (const auto& [path, entry] : newEntries) {
+        entries_.insert_or_assign(path, entry);
     }
 }

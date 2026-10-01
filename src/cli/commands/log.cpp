@@ -6,13 +6,14 @@
 #include <iostream>
 #include <ark/objects/objects.h>
 #include <queue>
-#include <ark/repo/ref.h>
+#include <ark/repo/ref_store.h>
 #include <sstream>
 #include <string>
 
 void logBranch(const std::string &branchName) {
-  Ref ref;
-  std::string commitHash = ref.getBranchHash(branchName);
+  RefStore ref;
+  auto target = ref.branchTarget(ark::BranchName::unchecked(branchName));
+  std::string commitHash = target ? target->hex() : "";
   std::queue<std::string> commit_hashes_queue;
 
   while (commitHash != NULL_HASH) {
@@ -32,14 +33,14 @@ void logBranch(const std::string &branchName) {
 }
 
 int cmd_log(const std::vector<std::string> &args) {
-  Ref ref;
-  std::string currentBranch = ref.getCurrentBranchName();
+  RefStore ref;
+  auto branch = ref.currentBranch();
 
-  if (currentBranch.empty()) {
+  if (!branch) {
     std::cout << "HEAD is detached\n";
     return 1;
   }
 
-  logBranch(currentBranch);
+  logBranch(branch->str());
   return 0;
 }

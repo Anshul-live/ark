@@ -50,9 +50,10 @@ add_library(ark_core STATIC
     src/storage/compression.cpp
     src/objects/objects.cpp
     src/repo/index.cpp
+    src/repo/index_file.cpp
     src/repo/config.cpp
     src/repo/repository.cpp
-    src/repo/ref.cpp
+    src/repo/ref_store.cpp
     src/util/logger.cpp
     src/util/strings.cpp
     src/util/fs.cpp

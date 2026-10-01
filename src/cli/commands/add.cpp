@@ -45,7 +45,9 @@ int cmd_add(const std::vector<std::string>& args) {
         if (std::filesystem::is_regular_file(abs_path)) {
             Blob* blob = Blob::fromFile(abs_path);
             std::string mode = repo.getMode(abs_path);
-            idx.stage(rel_norm, blob->hash, mode);
+            ark::FileEntry entry{ark::ObjectHash::parse(blob->hash).value(),
+                                 ark::parseFileMode(mode).value_or(ark::FileMode::Regular)};
+            idx.stage(ark::RepoPath::fromRelative(rel_norm), entry);
             blob->writeObjectToDisk();
         }
         else if (std::filesystem::is_directory(abs_path)) {

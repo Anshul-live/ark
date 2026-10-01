@@ -4,7 +4,7 @@
 #include <ark/repo/index.h>
 #include <iostream>
 #include <ark/objects/objects.h>
-#include <ark/repo/ref.h>
+#include <ark/repo/ref_store.h>
 #include <ark/repo/repository.h>
 #include <ark/cli/commands.h>
 
@@ -15,18 +15,22 @@ int cmd_switch(const std::vector<std::string> &args) {
   }
 
   const std::string &branchName = args[0];
-  Ref ref;
+  RefStore ref;
 
-  if (!ref.branchExists(branchName)) {
+  const auto branch = ark::BranchName::unchecked(branchName);
+
+  if (!ref.branchExists(branch)) {
     std::cerr << "branch " << branchName << " does not exist\n";
     return 1;
   }
 
-  std::string sourceCommitHash = ref.getHeadCommit();
-  std::string targetCommitHash = ref.getBranchHash(branchName);
-  std::string sourceBranchName = ref.getCurrentBranchName();
+  auto sourceHead = ref.resolveHead();
+  std::string sourceCommitHash = sourceHead ? sourceHead->hex() : "";
+  std::string targetCommitHash = ref.branchTarget(branch)->hex();
+  auto sourceBranch = ref.currentBranch();
+  std::string sourceBranchName = sourceBranch ? sourceBranch->str() : "";
 
-  if (!ref.isDetached() && sourceBranchName == branchName) {
+  if (!ref.isHeadDetached() && sourceBranchName == branchName) {
     std::cerr << "already on branch " << branchName << "\n";
     return 0;
   }
@@ -44,21 +48,21 @@ int cmd_switch(const std::vector<std::string> &args) {
   Tree::diff(sourceCommit.tree->root, targetCommit.tree->root, diff,
              repo.root());
 
-  ref.setHeadToBranch(branchName);
+  ref.attachHeadTo(branch);
   Tree::buildFromDiff(diff);
 
   Index idx;
   idx.clear();
 
   auto flat = targetCommit.tree->flatten();
-  std::unordered_map<std::string, IndexEntry> newEntries;
+  ark::FlatTree newEntries;
   for (auto &[path, pair] : flat) {
-    IndexEntry entry;
-    entry.hash = pair.first;
-    entry.mode = pair.second;
-    newEntries[path] = entry;
+    ark::FileEntry entry{
+        ark::ObjectHash::unchecked(pair.first),
+        ark::parseFileMode(pair.second).value_or(ark::FileMode::Regular)};
+    newEntries.insert_or_assign(ark::RepoPath::fromRelative(path), entry);
   }
-  idx.setAll(newEntries);
+  idx.replaceAll(std::move(newEntries));
 
   idx.save();
 

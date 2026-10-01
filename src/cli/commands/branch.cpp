@@ -3,37 +3,39 @@
 #include <fstream>
 #include <filesystem>
 #include <ark/cli/commit_message_editor.h>
-#include <ark/repo/ref.h>
+#include <ark/repo/ref_store.h>
 
 int cmd_branch(const std::vector<std::string> &args){
-  Ref ref;
+  RefStore ref;
   
   if(args.size() < 1){
       auto branches = ref.listBranches();
-      std::string currentBranch = ref.getCurrentBranchName();
+      auto current = ref.currentBranch();
+      std::string currentBranch = current ? current->str() : "";
       for (const auto& branch : branches) {
-          if (branch == currentBranch) {
-              std::cout << "* \033[32m" << branch << "\033[0m\n";
+          if (branch.str() == currentBranch) {
+              std::cout << "* \033[32m" << branch.str() << "\033[0m\n";
           } else {
-              std::cout << "  " << branch << "\n";
+              std::cout << "  " << branch.str() << "\n";
           }
       }
       return 0;
   }
   
   std::string name = args[0];
-  std::string commitHash = ref.getHeadCommit();
+  auto head = ref.resolveHead();
   
-  if(commitHash.empty() || commitHash == NULL_HASH){
+  if(!head || head->hex() == NULL_HASH){
     std::cerr << "please make a commit first";
     return 1;
   }
   
-  if(ref.branchExists(name)){
+  const auto branch = ark::BranchName::unchecked(name);
+  if(ref.branchExists(branch)){
     std::cout << "branch already exists" << std::endl;
     return 1;
   }
   
-  ref.createBranch(name, commitHash);
+  ref.createBranch(branch, *head);
   return 0;
 }

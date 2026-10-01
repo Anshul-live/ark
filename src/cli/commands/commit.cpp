@@ -2,11 +2,12 @@
 #include <ark/repo/config.h>
 #include <iostream>
 #include <ark/objects/objects.h>
-#include <ark/repo/ref.h>
+#include <ark/repo/ref_store.h>
 
 int cmd_commit(const std::vector<std::string> &args) {
-  Ref ref;
-  std::string commitHash = ref.getHeadCommit();
+  RefStore ref;
+  auto head = ref.resolveHead();
+  std::string commitHash = head ? head->hex() : "";
 
   Commit *latestCommit = nullptr;
   if (!commitHash.empty()) {
@@ -28,10 +29,11 @@ int cmd_commit(const std::vector<std::string> &args) {
     return 1;
   }
 
-  std::string parentCommitHash = ref.getHeadCommit();
+  auto parentHead = ref.resolveHead();
+  std::string parentCommitHash = parentHead ? parentHead->hex() : "";
   Commit *commit = new Commit(message, parentCommitHash);
   commit->writeObjectToDisk();
-  ref.setHeadToCommit(commit->hash);
+  ref.moveHeadTo(ark::ObjectHash::parse(commit->hash).value());
 
   delete latestCommit;
   return 0;

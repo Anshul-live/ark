@@ -3,7 +3,7 @@
 #include <ark/cli/commit_message_editor.h>
 #include <ark/repo/index.h>
 #include <ark/objects/objects.h>
-#include <ark/repo/ref.h>
+#include <ark/repo/ref_store.h>
 
 int cmd_merge(const std::vector<std::string> &args) {
   if (args.size() < 1) {
@@ -12,18 +12,23 @@ int cmd_merge(const std::vector<std::string> &args) {
   }
 
   const std::string &branchName = args[0];
-  Ref ref;
+  RefStore ref;
 
-  if (!ref.branchExists(branchName)) {
+  const auto branch = ark::BranchName::unchecked(branchName);
+
+  if (!ref.branchExists(branch)) {
     std::cerr << "branch " << branchName << " does not exist\n";
     return 1;
   }
 
-  std::string ourCommitHash = ref.getHeadCommit();
-  std::string theirCommitHash = ref.getBranchHash(branchName);
-  std::string ourBranchName = ref.getCurrentBranchName();
+  auto ourHead = ref.resolveHead();
+  std::string ourCommitHash = ourHead ? ourHead->hex() : "";
+  auto theirHead = ref.branchTarget(branch);
+  std::string theirCommitHash = theirHead ? theirHead->hex() : "";
+  auto ourBranch = ref.currentBranch();
+  std::string ourBranchName = ourBranch ? ourBranch->str() : "";
 
-  if (!ref.isDetached() && ourBranchName == branchName) {
+  if (!ref.isHeadDetached() && ourBranchName == branchName) {
     std::cerr << "their branch is same as ours" << "\n";
     return 0;
   }

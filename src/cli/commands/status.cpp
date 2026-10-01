@@ -1,6 +1,6 @@
 #include <ark/cli/commands.h>
 #include <ark/objects/objects.h>
-#include <ark/repo/ref.h>
+#include <ark/repo/ref_store.h>
 #include <ark/repo/index.h>
 #include <ark/repo/repository.h>
 
@@ -18,8 +18,9 @@ bool status() {
     Index idx;
     idx.load();
 
-    Ref ref;
-    std::string commitHash = ref.getHeadCommit();
+    RefStore ref;
+    auto head = ref.resolveHead();
+    std::string commitHash = head ? head->hex() : "";
     
     Commit commit;
     if (!commitHash.empty()) {
@@ -32,9 +33,9 @@ bool status() {
 
     std::cout << "Changes to be committed:\n";
 
-    auto indexEntries = idx.getEntries();
-    for (const auto& [path, entry] : indexEntries) {
-        const std::string& index_hash = entry.hash;
+    for (const auto& [repoPath, entry] : idx.entries()) {
+        const std::string& path = repoPath.str();
+        const std::string& index_hash = entry.hash.hex();
 
         auto it = latest_committed_files.find(path);
 
@@ -50,11 +51,11 @@ bool status() {
     std::cout << "\nChanges not staged for commit:\n";
 
     for (const auto& [path, blob] : working_directory) {
-        const IndexEntry* ent = idx.get(path);
+        const ark::FileEntry* ent = idx.find(ark::RepoPath::fromRelative(path));
         if (ent) {
             Blob fresh(path);
 
-            if (fresh.hash != ent->hash &&
+            if (fresh.hash != ent->hash.hex() &&
                 printed.find(path) == printed.end()) {
 
                 std::cout << "\033[31m" << path << " (modified)\033[0m\n";
@@ -67,7 +68,7 @@ bool status() {
     std::cout << "\nUntracked files:\n";
 
     for (const auto& [path, blob] : working_directory) {
-        bool not_in_index  = !idx.contains(path);
+        bool not_in_index  = !idx.contains(ark::RepoPath::fromRelative(path));
         bool not_in_commit = latest_committed_files.find(path) == latest_committed_files.end();
 
         if (not_in_index && not_in_commit &&

@@ -19,6 +19,11 @@ public:
   static std::optional<ObjectHash> parse(std::string_view hex);
   static ObjectHash fromDigest(const std::array<unsigned char, 32> &digest);
   static ObjectHash zero();
+  // Skips validation; only for values read from disk or user input where the
+  // existing behaviour accepts any string.
+  static ObjectHash unchecked(std::string hex) {
+    return ObjectHash(std::move(hex));
+  }
 
   bool isZero() const;
   const std::string &hex() const { return hex_; }
