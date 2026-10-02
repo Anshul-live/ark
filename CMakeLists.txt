@@ -48,6 +48,9 @@ add_library(ark_core STATIC
     src/core/ref_name.cpp
 
     src/storage/compression.cpp
+    src/storage/sha256.cpp
+    src/storage/object_format.cpp
+    src/storage/object_store.cpp
     src/objects/objects.cpp
     src/repo/index.cpp
     src/repo/index_file.cpp
@@ -82,6 +85,7 @@ add_executable(test_ark
     tests/unit/repository_test.cpp
     tests/unit/logger_test.cpp
     tests/unit/core_types_test.cpp
+    tests/unit/object_store_test.cpp
 
     tests/cli/init_test.cpp
     tests/cli/plumbing_test.cpp

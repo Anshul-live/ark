@@ -4,7 +4,9 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <ark/core/exceptions.h>
 #include <ark/objects/objects.h>
+#include <ark/storage/object_store.h>
 #include <ark/repo/repository.h>
 #include <sstream>
 
@@ -20,11 +22,23 @@ int cmd_catFile(const std::vector<std::string> &args) {
     return 1;
   }
 
-  std::string data = Object::readFromDisk(object_hash);
+  Repository repo;
+  ark::ObjectStore store(repo.objectsDir());
+  ark::ObjectHash hash = ark::ObjectHash::unchecked(object_hash);
+
+  std::string data = store.readFramed(hash).value_or("");
   if (data.empty()) {
     std::cerr << "Error: object not found for hash " << object_hash
               << std::endl;
     return 1;
+  }
+
+  try {
+    std::cout << ark::parseObjectFrame(hash, data).body << "\n";
+    return 0;
+  } catch (const ObjectFormatException &) {
+    // Lenient fallback keeps the historic output for frames whose declared
+    // size does not match the body.
   }
 
   size_t null_position = data.find('\0');
@@ -34,15 +48,12 @@ int cmd_catFile(const std::vector<std::string> &args) {
   }
 
   std::string header = data.substr(0, null_position);
-  std::string content = data.substr(null_position + 1);
-
   if (header.rfind("blob ", 0) == 0 || header.rfind("tree ", 0) == 0 ||
       header.rfind("commit ", 0) == 0) {
-    std::cout << content << "\n";
+    std::cout << data.substr(null_position + 1) << "\n";
     return 0;
-  } else {
-    std::cerr << "Error: unsupported object type in header: " << header
-              << std::endl;
   }
+  std::cerr << "Error: unsupported object type in header: " << header
+            << std::endl;
   return 1;
 }

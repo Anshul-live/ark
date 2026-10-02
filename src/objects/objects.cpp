@@ -14,7 +14,9 @@
 #include <iomanip>
 #include <iostream>
 #include <ark/objects/objects.h>
-#include <openssl/sha.h>
+#include <ark/storage/object_format.h>
+#include <ark/storage/object_store.h>
+#include <ark/storage/sha256.h>
 #include <ark/repo/repository.h>
 #include <sstream>
 #include <string>
@@ -31,8 +33,7 @@ Blob::Blob(const std::string &filename) {
   std::string file_content = buffer.str();
 
   // Create Git-like blob content (blob header + content)
-  this->content = "blob " + std::to_string(file_content.size()) +
-                  std::string("\0", 1) + file_content;
+  this->content = ark::frameObject(ark::ObjectType::Blob, file_content);
 
   this->hash = this->getSha256();
 }
@@ -244,8 +245,7 @@ void Tree::writeTreeToDisk(TreeNode *root) {
   }
 
   std::string raw_tree_content = buffer.str();
-  root->content = "tree " + std::to_string(raw_tree_content.size()) +
-                  std::string("\0", 1) + raw_tree_content;
+  root->content = ark::frameObject(ark::ObjectType::Tree, raw_tree_content);
 
   root->hash = root->getSha256();
   root->writeObjectToDisk();
@@ -288,8 +288,7 @@ Commit::Commit(const std::string &message, const std::string &parent_hash) {
 
   buffer << message << "\n";
   std::string raw_content = buffer.str();
-  this->content = "commit " + std::to_string(raw_content.size()) +
-                  std::string("\0", 1) + raw_content;
+  this->content = ark::frameObject(ark::ObjectType::Commit, raw_content);
   this->hash = this->getSha256();
 }
 
@@ -322,8 +321,7 @@ Commit::Commit(const std::string &message, const std::string &parent1_hash,
 
   buffer << message << "\n";
   std::string raw_content = buffer.str();
-  this->content = "commit " + std::to_string(raw_content.size()) +
-                  std::string("\0", 1) + raw_content;
+  this->content = ark::frameObject(ark::ObjectType::Commit, raw_content);
   this->hash = this->getSha256();
 }
 
@@ -387,8 +385,7 @@ Commit *Commit::create(const std::string &treeHash,
   buffer << message << "\n";
 
   std::string raw_content = buffer.str();
-  commit->content = "commit " + std::to_string(raw_content.size()) +
-                    std::string("\0", 1) + raw_content;
+  commit->content = ark::frameObject(ark::ObjectType::Commit, raw_content);
   commit->hash = commit->getSha256();
   commit->writeObjectToDisk();
 
@@ -397,95 +394,29 @@ Commit *Commit::create(const std::string &treeHash,
 
 std::string Object::readFromDisk(const std::string &hash) {
   Repository repo;
-  std::string object_dir = repo.objectsDir() + "/" + hash.substr(0, 2) + "/";
-  std::string object_file = object_dir + hash.substr(2);
-
-  if (!std::filesystem::exists(object_file)) {
-    return "";
-  }
-
-  std::ifstream in(object_file, std::ios::binary);
-  if (!in) {
-    return "";
-  }
-
-  std::ostringstream buffer;
-  buffer << in.rdbuf();
-  std::string compressed = buffer.str();
-
-  return decompressObject(compressed);
+  ark::ObjectStore store(repo.objectsDir());
+  return store.readFramed(ark::ObjectHash::unchecked(hash)).value_or("");
 }
 
 std::string Object::stripHeaderFromObject(const std::string &hash,
                                           const std::string &data) {
-  size_t nul = data.find('\0');
-  if (nul == std::string::npos)
-    throw ObjectFormatException(hash, "missing header");
-
-  std::string header = data.substr(0, nul);
-  std::string body = data.substr(nul + 1);
-
-  size_t space = header.find(' ');
-  if (space == std::string::npos)
-    throw ObjectFormatException(hash, "malformed header");
-
-  std::string type = header.substr(0, space);
-  if (type != "blob" && type != "tree" && type != "commit")
-    throw ObjectFormatException(hash, "unsupported type " + type);
-
-  const char *first = header.data() + space + 1;
-  const char *last = header.data() + header.size();
-  size_t declared = 0;
-  auto [ptr, ec] = std::from_chars(first, last, declared);
-  if (ec != std::errc() || ptr != last)
-    throw ObjectFormatException(hash, "invalid size in header");
-
-  if (declared != body.size())
-    throw ObjectFormatException(hash, "size mismatch");
-
-  return body;
+  return ark::parseObjectFrame(ark::ObjectHash::unchecked(hash), data).body;
 }
 
 bool Object::isWrittenToDisk() {
   Repository repo;
-  std::string object_dir =
-      repo.objectsDir() + "/" + this->hash.substr(0, 2) + "/";
-  if (!std::filesystem::exists(object_dir))
-    return false;
-  if (!std::filesystem::exists(object_dir + this->hash.substr(2)))
-    return false;
-
-  return true;
+  return ark::ObjectStore(repo.objectsDir())
+      .contains(ark::ObjectHash::unchecked(hash));
 }
 
-std::string Object::getSha256() {
-  unsigned char hash[SHA256_DIGEST_LENGTH];
-  SHA256_CTX sha256;
-  SHA256_Init(&sha256);
-  SHA256_Update(&sha256, content.c_str(), content.size());
-  SHA256_Final(hash, &sha256);
+std::string Object::getSha256() { return ark::sha256Hex(content); }
 
-  // 4. Convert hash to hex string
-  std::ostringstream hexStream;
-  for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-    hexStream << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
-  }
-  return hexStream.str();
-}
 void Object::writeObjectToDisk() {
   Repository repo;
-  std::string dirName = repo.objectsDir() + "/" + hash.substr(0, 2);
-  std::string fileName = dirName + "/" + hash.substr(2);
-  std::filesystem::create_directories(dirName);
-  std::string compressed_object_content = compressObject(content);
-  std::ofstream out(fileName, std::ios::binary);
-  if (!compressed_object_content.empty()) {
-    out.write(compressed_object_content.data(),
-              static_cast<std::streamsize>(compressed_object_content.size()));
-  } else {
-    out.write(content.data(), static_cast<std::streamsize>(content.size()));
-  }
-  out.close();
+  ark::ObjectStore store(repo.objectsDir());
+  ark::RawObject raw =
+      ark::parseObjectFrame(ark::ObjectHash::unchecked(hash), content);
+  store.write(raw.type, raw.body);
 }
 
 std::string Object::typeName() const {
