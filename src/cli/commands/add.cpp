@@ -2,7 +2,9 @@
 #include <ark/cli/commands.h>
 #include <ark/cli/commit_message_editor.h>
 #include <filesystem>
+#include <ark/objects/blob.h>
 #include <ark/objects/objects.h>
+#include <ark/storage/object_store.h>
 #include <unordered_map>
 #include <sstream>
 #include <fstream>
@@ -43,12 +45,16 @@ int cmd_add(const std::vector<std::string>& args) {
         }
 
         if (std::filesystem::is_regular_file(abs_path)) {
-            Blob* blob = Blob::fromFile(abs_path);
+            ark::Blob blob = ark::Blob::readFromFile(abs_path);
+            if (!std::ifstream(abs_path, std::ios::binary)) {
+                return 1;
+            }
             std::string mode = repo.getMode(abs_path);
-            ark::FileEntry entry{ark::ObjectHash::parse(blob->hash).value(),
+            ark::ObjectHash blobHash = ark::ObjectStore::hashOf(ark::ObjectType::Blob, blob.data);
+            ark::FileEntry entry{blobHash,
                                  ark::parseFileMode(mode).value_or(ark::FileMode::Regular)};
             idx.stage(ark::RepoPath::fromRelative(rel_norm), entry);
-            blob->writeObjectToDisk();
+            ark::ObjectStore(repo.objectsDir()).write(ark::ObjectType::Blob, blob.data);
         }
         else if (std::filesystem::is_directory(abs_path)) {
             if (repo.isIgnored(abs_norm + "/")) {

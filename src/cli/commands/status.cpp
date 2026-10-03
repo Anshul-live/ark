@@ -1,5 +1,6 @@
 #include <ark/cli/commands.h>
 #include <ark/objects/objects.h>
+#include <ark/storage/object_store.h>
 #include <ark/repo/ref_store.h>
 #include <ark/repo/index.h>
 #include <ark/repo/repository.h>
@@ -27,7 +28,7 @@ bool status() {
         commit.loadFromDisk(commitHash);
     }
     
-    auto latest_committed_files = commit.tree->flatten();
+    auto latest_committed_files = commit.files;
 
     std::unordered_set<std::string> printed;
 
@@ -37,10 +38,10 @@ bool status() {
         const std::string& path = repoPath.str();
         const std::string& index_hash = entry.hash.hex();
 
-        auto it = latest_committed_files.find(path);
+        auto it = latest_committed_files.find(repoPath);
 
         if (it == latest_committed_files.end() ||
-            it->second.first != index_hash) {
+            it->second.hash.hex() != index_hash) {
 
             std::cout << "\033[32m" << path << "\033[0m\n";
             printed.insert(path);
@@ -53,9 +54,11 @@ bool status() {
     for (const auto& [path, blob] : working_directory) {
         const ark::FileEntry* ent = idx.find(ark::RepoPath::fromRelative(path));
         if (ent) {
-            Blob fresh(path);
+            ark::Blob fresh = ark::Blob::readFromFile(path);
+            std::string freshHash =
+                ark::ObjectStore::hashOf(ark::ObjectType::Blob, fresh.data).hex();
 
-            if (fresh.hash != ent->hash.hex() &&
+            if (freshHash != ent->hash.hex() &&
                 printed.find(path) == printed.end()) {
 
                 std::cout << "\033[31m" << path << " (modified)\033[0m\n";
@@ -69,7 +72,8 @@ bool status() {
 
     for (const auto& [path, blob] : working_directory) {
         bool not_in_index  = !idx.contains(ark::RepoPath::fromRelative(path));
-        bool not_in_commit = latest_committed_files.find(path) == latest_committed_files.end();
+        bool not_in_commit = latest_committed_files.find(ark::RepoPath::fromRelative(path)) ==
+                           latest_committed_files.end();
 
         if (not_in_index && not_in_commit &&
             printed.find(path) == printed.end()) {

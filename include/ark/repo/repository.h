@@ -1,6 +1,7 @@
 #ifndef REPOSITORY_HPP
 #define REPOSITORY_HPP
 
+#include <ark/objects/blob.h>
 #include <chrono>
 #include <ctime>
 #include <filesystem>
@@ -10,7 +11,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-class Blob;
 
 class Repository {
 public:
@@ -33,7 +33,7 @@ public:
   std::unordered_set<std::string> loadIgnorePatterns() const;
   bool isIgnored(const std::string &path) const;
 
-  std::unordered_map<std::string, Blob *>
+  std::unordered_map<std::string, ark::Blob>
   loadWorkingDirectoryWithoutIgnored() const;
 
 private:

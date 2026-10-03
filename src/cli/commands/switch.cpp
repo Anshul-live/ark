@@ -3,7 +3,9 @@
 #include <fstream>
 #include <ark/repo/index.h>
 #include <iostream>
+#include <ark/objects/checkout_legacy.h>
 #include <ark/objects/objects.h>
+#include <ark/storage/object_store.h>
 #include <ark/repo/ref_store.h>
 #include <ark/repo/repository.h>
 #include <ark/cli/commands.h>
@@ -42,27 +44,18 @@ int cmd_switch(const std::vector<std::string> &args) {
 
   Commit targetCommit;
   targetCommit.loadFromDisk(targetCommitHash);
-  std::unordered_map<std::string, std::vector<std::pair<Object *, std::string>>>
-      diff;
   Repository repo;
-  Tree::diff(sourceCommit.tree->root, targetCommit.tree->root, diff,
-             repo.root());
+  ark::CheckoutPlan plan =
+      ark::planCheckout(sourceCommit.files, targetCommit.files, repo.root());
 
   ref.attachHeadTo(branch);
-  Tree::buildFromDiff(diff);
+  ark::ObjectStore store(repo.objectsDir());
+  ark::applyCheckout(plan, store);
 
   Index idx;
   idx.clear();
 
-  auto flat = targetCommit.tree->flatten();
-  ark::FlatTree newEntries;
-  for (auto &[path, pair] : flat) {
-    ark::FileEntry entry{
-        ark::ObjectHash::unchecked(pair.first),
-        ark::parseFileMode(pair.second).value_or(ark::FileMode::Regular)};
-    newEntries.insert_or_assign(ark::RepoPath::fromRelative(path), entry);
-  }
-  idx.replaceAll(std::move(newEntries));
+  idx.replaceAll(targetCommit.files);
 
   idx.save();
 

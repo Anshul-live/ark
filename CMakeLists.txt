@@ -52,6 +52,11 @@ add_library(ark_core STATIC
     src/storage/object_format.cpp
     src/storage/object_store.cpp
     src/objects/objects.cpp
+    src/objects/blob.cpp
+    src/objects/tree.cpp
+    src/objects/flat_tree.cpp
+    src/objects/tree_builder.cpp
+    src/objects/checkout_legacy.cpp
     src/repo/index.cpp
     src/repo/index_file.cpp
     src/repo/config.cpp
@@ -79,6 +84,7 @@ add_executable(test_ark
 
     tests/unit/compress_test.cpp
     tests/unit/objects_test.cpp
+    tests/unit/tree_test.cpp
     tests/unit/index_test.cpp
     tests/unit/config_test.cpp
     tests/unit/ref_test.cpp

@@ -2,6 +2,7 @@
 #define OBJECTS_HPP
 
 #include <ark/cli/commit_message_editor.h>
+#include <ark/objects/flat_tree.h>
 #include <ark/storage/compression.h>
 #include <fstream>
 #include <iostream>
@@ -25,68 +26,15 @@ public:
   void writeObjectToDisk();
   bool isWrittenToDisk();
 
-  std::string typeName() const;
-
   static std::string readFromDisk(const std::string &hash);
   static std::string stripHeaderFromObject(const std::string &hash,
                                            const std::string &data);
 };
 
-// ---------- Blob ----------
-class Blob : public Object {
-public:
-  Blob() = default;
-
-  Blob(const std::string &filename);
-  static Blob *fromFile(const std::string &filename);
-  void loadFromDisk(const std::string &hash);
-  bool createFile(const std::string &path);
-  bool deleteFile(const std::string &path);
-  bool overwriteFile(const std::string &path);
-};
-
-// ---------- TreeNode ----------
-class TreeNode : public Object {
-public:
-  // Key = hash, Value = child object
-  std::unordered_map<std::string, Object *> children;
-  void loadFromDisk(const std::string &hash);
-};
-
-// ---------- Tree ----------
-class Tree {
-public:
-  TreeNode *root;
-
-  Tree();
-
-  void insertBlob(TreeNode *root, const std::vector<std::string> &path,
-                  int level, const std::string &hash, const std::string &mode);
-
-  void writeTreeToDisk(TreeNode *root);
-  void buildFromIndex();
-  void loadTreeFromDisk(const std::string &hash);
-  std::unordered_map<std::string, std::pair<std::string, std::string>>
-  flatten();
-  void flattenHelper(
-      TreeNode *root,
-      std::unordered_map<std::string, std::pair<std::string, std::string>>
-          &entries);
-
-  static Tree *write();
-  static void
-  diff(TreeNode *first, TreeNode *second,
-       std::unordered_map<
-           std::string, std::vector<std::pair<Object *, std::string>>> &summary,
-       const std::string &path);
-  static void buildFromDiff(
-      std::unordered_map<std::string,
-                         std::vector<std::pair<Object *, std::string>>> &diff);
-};
-
 class Commit : public Object {
 public:
-  Tree *tree;
+  std::string treeHash;
+  ark::FlatTree files;
   std::vector<std::string> parents;
   Commit();
   Commit(const std::string &message, const std::string &parent_hash);

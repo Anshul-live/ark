@@ -204,9 +204,9 @@ bool Repository::isIgnored(const std::string &path) const {
   return false;
 }
 
-std::unordered_map<std::string, Blob *>
+std::unordered_map<std::string, ark::Blob>
 Repository::loadWorkingDirectoryWithoutIgnored() const {
-  std::unordered_map<std::string, Blob *> blobs;
+  std::unordered_map<std::string, ark::Blob> blobs;
   std::vector<std::string> paths;
   paths.push_back(root());
 
@@ -223,8 +223,8 @@ Repository::loadWorkingDirectoryWithoutIgnored() const {
     }
 
     if (std::filesystem::is_regular_file(path)) {
-      Blob *blob = Blob::fromFile(path);
-      blobs[std::filesystem::relative(path, root()).string()] = blob;
+      blobs[std::filesystem::relative(path, root()).string()] =
+          ark::Blob::readFromFile(path);
     } else if (std::filesystem::is_directory(path)) {
       if (isIgnored(genericPath + "/")) {
         continue;
