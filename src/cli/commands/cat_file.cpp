@@ -5,7 +5,6 @@
 #include <fstream>
 #include <iostream>
 #include <ark/core/exceptions.h>
-#include <ark/objects/objects.h>
 #include <ark/storage/object_store.h>
 #include <ark/repo/repository.h>
 #include <sstream>

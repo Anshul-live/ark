@@ -5,7 +5,6 @@
 #include <ark/core/exceptions.h>
 #include <fstream>
 #include <ark/cli/commands.h>
-#include <ark/objects/objects.h>
 #include <iostream>
 #include <ark/util/fs.h>
 #include <ark/util/logger.h>

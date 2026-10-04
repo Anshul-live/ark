@@ -3,7 +3,9 @@
 #include <ark/repo/index.h>
 #include <ark/cli/commands.h>
 #include <ark/objects/blob.h>
-#include <ark/objects/objects.h>
+#include <ark/objects/commit.h>
+#include <ark/objects/commit_store.h>
+#include <ark/repo/config.h>
 #include <ark/objects/tree_builder.h>
 #include <ark/repo/repository.h>
 #include <ark/storage/object_store.h>
@@ -165,14 +167,26 @@ TEST_F(ObjectsTest, CommitCreateRecordsTreeParentsAndMessage) {
   idx.save();
   const std::string tree = writeTree();
 
-  Commit *root = Commit::create(tree, "", "", "first");
-  CommitInfo info = parseCommit(readObject(repo(), root->hash)->body);
+  Repository r;
+  ark::ObjectStore store(r.objectsDir());
+  ark::CommitStore commits(store);
+  const ark::Identity who{"Unit", "unit@test"};
+
+  ark::Commit rootCommit;
+  rootCommit.tree = ark::ObjectHash::unchecked(tree);
+  rootCommit.committer = ark::Signature::now(who);
+  rootCommit.message = "first";
+  const std::string rootHash = commits.write(rootCommit).hex();
+  CommitInfo info = parseCommit(readObject(repo(), rootHash)->body);
   EXPECT_EQ(info.tree, tree);
   EXPECT_TRUE(info.parents.empty());
   EXPECT_EQ(info.message, "first");
   EXPECT_NE(info.committer.find("Unit <unit@test>"), std::string::npos);
 
-  Commit *child = Commit::create(tree, root->hash, "", "second");
-  EXPECT_EQ(parseCommit(readObject(repo(), child->hash)->body).parents,
-            std::vector<std::string>{root->hash});
+  ark::Commit child = rootCommit;
+  child.parents = {ark::ObjectHash::unchecked(rootHash)};
+  child.message = "second";
+  const std::string childHash = commits.write(child).hex();
+  EXPECT_EQ(parseCommit(readObject(repo(), childHash)->body).parents,
+            std::vector<std::string>{rootHash});
 }

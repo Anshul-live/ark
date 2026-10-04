@@ -1,26 +1,25 @@
 #include <ark/cli/commit_message_editor.h>
+#include <ark/objects/commit.h>
+#include <ark/objects/commit_store.h>
+#include <ark/objects/tree_builder.h>
 #include <ark/repo/config.h>
-#include <iostream>
-#include <ark/objects/objects.h>
+#include <ark/repo/index.h>
 #include <ark/repo/ref_store.h>
+#include <ark/repo/repository.h>
+#include <ark/storage/object_store.h>
+#include <iostream>
 
 int cmd_commit(const std::vector<std::string> &args) {
   RefStore ref;
   auto head = ref.resolveHead();
   std::string commitHash = head ? head->hex() : "";
 
-  Commit *latestCommit = nullptr;
-  if (!commitHash.empty()) {
-    latestCommit = new Commit();
-    latestCommit->loadFromDisk(commitHash);
-  }
+  Repository repo;
+  ark::ObjectStore store(repo.objectsDir());
+  ark::CommitStore commits(store);
 
-  bool hasChanges = true;
-  if (latestCommit) {
-    hasChanges = false;
-  }
-
-  if (!latestCommit || hasChanges) {
+  if (!commitHash.empty() && commitHash != NULL_HASH) {
+    commits.read(ark::ObjectHash::unchecked(commitHash));
   }
 
   std::string message = CommitMessageEditor::prompt();
@@ -31,10 +30,25 @@ int cmd_commit(const std::vector<std::string> &args) {
 
   auto parentHead = ref.resolveHead();
   std::string parentCommitHash = parentHead ? parentHead->hex() : "";
-  Commit *commit = new Commit(message, parentCommitHash);
-  commit->writeObjectToDisk();
-  ref.moveHeadTo(ark::ObjectHash::parse(commit->hash).value());
 
-  delete latestCommit;
+  Config config;
+  config.load();
+  Index idx;
+  idx.load();
+  ark::Commit commit;
+  commit.tree = ark::writeTreeFromIndex(idx, store);
+  if (!config.hasUserConfig()) {
+    std::cerr << "please provide the following values user.name and user.email "
+                 "before committing.\n";
+    exit(0);
+  }
+  std::cout << "passed checks" << std::endl;
+  commit.parents.push_back(ark::ObjectHash::unchecked(parentCommitHash));
+  commit.committer = ark::Signature::now(
+      ark::Identity{config.getUserName(), config.getUserEmail()});
+  commit.message = message;
+
+  ark::ObjectHash written = commits.write(commit);
+  ref.moveHeadTo(written);
   return 0;
 }

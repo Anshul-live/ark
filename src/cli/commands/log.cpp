@@ -4,7 +4,10 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <ark/objects/objects.h>
+#include <ark/objects/commit.h>
+#include <ark/objects/commit_store.h>
+#include <ark/repo/repository.h>
+#include <ark/storage/object_store.h>
 #include <queue>
 #include <ark/repo/ref_store.h>
 #include <sstream>
@@ -15,16 +18,15 @@ void logBranch(const std::string &branchName) {
   auto target = ref.branchTarget(ark::BranchName::unchecked(branchName));
   std::string commitHash = target ? target->hex() : "";
   std::queue<std::string> commit_hashes_queue;
+  Repository repo;
+  ark::ObjectStore store(repo.objectsDir());
+  ark::CommitStore commits(store);
 
   while (commitHash != NULL_HASH) {
-    std::string content = Object::readFromDisk(commitHash);
-    std::vector<std::string> lines = ark::text::split(content, '\n');
-    std::vector<std::string> data;
     std::cout << "\033[1;33mcommit: " << commitHash << "\033[0m\n";
-    Commit c;
-    c.loadFromDisk(commitHash);
-    for (auto parent : c.parents)
-      commit_hashes_queue.push(parent);
+    ark::Commit c = commits.read(ark::ObjectHash::unchecked(commitHash));
+    for (const auto &parent : c.parents)
+      commit_hashes_queue.push(parent.hex());
     if (commit_hashes_queue.empty())
       break;
     commitHash = commit_hashes_queue.front();

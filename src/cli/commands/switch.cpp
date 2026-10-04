@@ -4,7 +4,9 @@
 #include <ark/repo/index.h>
 #include <iostream>
 #include <ark/objects/checkout_legacy.h>
-#include <ark/objects/objects.h>
+#include <ark/objects/commit.h>
+#include <ark/objects/commit_store.h>
+#include <ark/objects/flat_tree.h>
 #include <ark/storage/object_store.h>
 #include <ark/repo/ref_store.h>
 #include <ark/repo/repository.h>
@@ -37,25 +39,32 @@ int cmd_switch(const std::vector<std::string> &args) {
     return 0;
   }
 
-  Commit sourceCommit;
+  Repository repo;
+  ark::ObjectStore store(repo.objectsDir());
+  ark::CommitStore commits(store);
+  auto filesOf = [&](const std::string &hash) {
+    if (hash == NULL_HASH)
+      return ark::FlatTree{};
+    ark::Commit commit = commits.read(ark::ObjectHash::unchecked(hash));
+    return ark::flattenTree(store, commit.tree);
+  };
+
+  ark::FlatTree sourceFiles;
   if (!sourceCommitHash.empty()) {
-    sourceCommit.loadFromDisk(sourceCommitHash);
+    sourceFiles = filesOf(sourceCommitHash);
   }
 
-  Commit targetCommit;
-  targetCommit.loadFromDisk(targetCommitHash);
-  Repository repo;
+  ark::FlatTree targetFiles = filesOf(targetCommitHash);
   ark::CheckoutPlan plan =
-      ark::planCheckout(sourceCommit.files, targetCommit.files, repo.root());
+      ark::planCheckout(sourceFiles, targetFiles, repo.root());
 
   ref.attachHeadTo(branch);
-  ark::ObjectStore store(repo.objectsDir());
   ark::applyCheckout(plan, store);
 
   Index idx;
   idx.clear();
 
-  idx.replaceAll(targetCommit.files);
+  idx.replaceAll(targetFiles);
 
   idx.save();
 

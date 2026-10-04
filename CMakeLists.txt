@@ -51,7 +51,8 @@ add_library(ark_core STATIC
     src/storage/sha256.cpp
     src/storage/object_format.cpp
     src/storage/object_store.cpp
-    src/objects/objects.cpp
+    src/objects/commit.cpp
+    src/objects/commit_store.cpp
     src/objects/blob.cpp
     src/objects/tree.cpp
     src/objects/flat_tree.cpp
@@ -84,6 +85,7 @@ add_executable(test_ark
 
     tests/unit/compress_test.cpp
     tests/unit/objects_test.cpp
+    tests/unit/commit_test.cpp
     tests/unit/tree_test.cpp
     tests/unit/index_test.cpp
     tests/unit/config_test.cpp

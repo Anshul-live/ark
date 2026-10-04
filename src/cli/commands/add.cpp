@@ -3,7 +3,6 @@
 #include <ark/cli/commit_message_editor.h>
 #include <filesystem>
 #include <ark/objects/blob.h>
-#include <ark/objects/objects.h>
 #include <ark/storage/object_store.h>
 #include <unordered_map>
 #include <sstream>

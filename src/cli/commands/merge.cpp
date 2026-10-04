@@ -2,7 +2,6 @@
 #include <ark/cli/commands.h>
 #include <ark/cli/commit_message_editor.h>
 #include <ark/repo/index.h>
-#include <ark/objects/objects.h>
 #include <ark/repo/ref_store.h>
 
 int cmd_merge(const std::vector<std::string> &args) {

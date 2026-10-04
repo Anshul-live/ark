@@ -1,5 +1,11 @@
 #include <ark/cli/commands.h>
-#include <ark/objects/objects.h>
+#include <ark/cli/commit_message_editor.h>
+#include <ark/objects/blob.h>
+#include <ark/objects/commit.h>
+#include <ark/objects/commit_store.h>
+#include <ark/objects/flat_tree.h>
+#include <iostream>
+#include <unordered_set>
 #include <ark/storage/object_store.h>
 #include <ark/repo/ref_store.h>
 #include <ark/repo/index.h>
@@ -23,12 +29,13 @@ bool status() {
     auto head = ref.resolveHead();
     std::string commitHash = head ? head->hex() : "";
     
-    Commit commit;
-    if (!commitHash.empty()) {
-        commit.loadFromDisk(commitHash);
+    ark::FlatTree latest_committed_files;
+    if (!commitHash.empty() && commitHash != NULL_HASH) {
+        ark::ObjectStore store(repo.objectsDir());
+        ark::Commit commit =
+            ark::CommitStore(store).read(ark::ObjectHash::unchecked(commitHash));
+        latest_committed_files = ark::flattenTree(store, commit.tree);
     }
-    
-    auto latest_committed_files = commit.files;
 
     std::unordered_set<std::string> printed;
 
