@@ -9,7 +9,10 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <ark/repo/repository.h>
+#include <ark/repo/ignore_rules.h>
 #include <ark/repo/index.h>
+#include <ark/repo/working_tree.h>
+#include <ark/core/file_mode.h>
 #include <ark/util/fs.h>
 
 int cmd_add(const std::vector<std::string>& args) {
@@ -24,44 +27,33 @@ int cmd_add(const std::vector<std::string>& args) {
     }
 
     Repository repo;
+    ark::IgnoreRules ignore = ark::IgnoreRules::load(repo);
+    ark::WorkingTree tree(repo, ignore);
     Index idx;
     idx.load();
 
-    for (size_t i = 0; i < paths.size(); i++) {
-        std::filesystem::path abs_path = std::filesystem::absolute(paths[i]);
-        std::filesystem::path rel_path = std::filesystem::relative(abs_path, repo.root());
+    for (const std::string& path : paths) {
+        bool completed = tree.forEachFile(
+            std::filesystem::absolute(path),
+            [&](const std::filesystem::path& abs_path) {
+                std::filesystem::path rel_path = std::filesystem::relative(abs_path, repo.root());
+                std::string rel_norm = ark::normalizeGenericPath(rel_path.string());
 
-        std::string abs_norm  = ark::normalizeGenericPath(abs_path.string());
-        std::string rel_norm  = ark::normalizeGenericPath(rel_path.string()); 
-
-        if (repo.isIgnored(abs_norm)) {
-            continue;
-        }
-
-        if (!std::filesystem::exists(abs_path)) {
-            std::cerr << abs_path << " does not exist.\n";
-            continue;
-        }
-
-        if (std::filesystem::is_regular_file(abs_path)) {
-            ark::Blob blob = ark::Blob::readFromFile(abs_path);
-            if (!std::ifstream(abs_path, std::ios::binary)) {
-                return 1;
-            }
-            std::string mode = repo.getMode(abs_path);
-            ark::ObjectHash blobHash = ark::ObjectStore::hashOf(ark::ObjectType::Blob, blob.data);
-            ark::FileEntry entry{blobHash,
-                                 ark::parseFileMode(mode).value_or(ark::FileMode::Regular)};
-            idx.stage(ark::RepoPath::fromRelative(rel_norm), entry);
-            ark::ObjectStore(repo.objectsDir()).write(ark::ObjectType::Blob, blob.data);
-        }
-        else if (std::filesystem::is_directory(abs_path)) {
-            if (repo.isIgnored(abs_norm + "/")) {
-                continue;
-            }
-            for (const auto& entry : std::filesystem::directory_iterator(abs_path)) {
-                paths.push_back(entry.path().string()); 
-            }
+                ark::Blob blob = ark::Blob::readFromFile(abs_path);
+                if (!std::ifstream(abs_path, std::ios::binary)) {
+                    return false;
+                }
+                ark::FileMode mode = ark::detectFileMode(abs_path).value_or(ark::FileMode::Regular);
+                ark::ObjectHash blobHash = ark::ObjectStore::hashOf(ark::ObjectType::Blob, blob.data);
+                idx.stage(ark::RepoPath::fromRelative(rel_norm), ark::FileEntry{blobHash, mode});
+                ark::ObjectStore(repo.objectsDir()).write(ark::ObjectType::Blob, blob.data);
+                return true;
+            },
+            [](const std::filesystem::path& missing) {
+                std::cerr << missing << " does not exist.\n";
+            });
+        if (!completed) {
+            return 1;
         }
     }
 

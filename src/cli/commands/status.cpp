@@ -1,26 +1,21 @@
 #include <ark/cli/commands.h>
 #include <ark/cli/commit_message_editor.h>
-#include <ark/objects/blob.h>
 #include <ark/objects/commit.h>
 #include <ark/objects/commit_store.h>
 #include <ark/objects/flat_tree.h>
-#include <iostream>
-#include <unordered_set>
-#include <ark/storage/object_store.h>
-#include <ark/repo/ref_store.h>
+#include <ark/repo/ignore_rules.h>
 #include <ark/repo/index.h>
+#include <ark/repo/ref_store.h>
 #include <ark/repo/repository.h>
+#include <ark/repo/status.h>
+#include <ark/repo/working_tree.h>
+#include <ark/storage/object_store.h>
+#include <iostream>
 
 int cmd_status(const std::vector<std::string> &args){
-  status();
-  return 0;
-}
-
-bool status() {
-    bool clean = true;
-
     Repository repo;
-    auto working_directory = repo.loadWorkingDirectoryWithoutIgnored();
+    ark::IgnoreRules ignore = ark::IgnoreRules::load(repo);
+    ark::FlatTree worktree = ark::WorkingTree(repo, ignore).scan();
 
     Index idx;
     idx.load();
@@ -28,7 +23,7 @@ bool status() {
     RefStore ref;
     auto head = ref.resolveHead();
     std::string commitHash = head ? head->hex() : "";
-    
+
     ark::FlatTree latest_committed_files;
     if (!commitHash.empty() && commitHash != NULL_HASH) {
         ark::ObjectStore store(repo.objectsDir());
@@ -37,58 +32,7 @@ bool status() {
         latest_committed_files = ark::flattenTree(store, commit.tree);
     }
 
-    std::unordered_set<std::string> printed;
-
-    std::cout << "Changes to be committed:\n";
-
-    for (const auto& [repoPath, entry] : idx.entries()) {
-        const std::string& path = repoPath.str();
-        const std::string& index_hash = entry.hash.hex();
-
-        auto it = latest_committed_files.find(repoPath);
-
-        if (it == latest_committed_files.end() ||
-            it->second.hash.hex() != index_hash) {
-
-            std::cout << "\033[32m" << path << "\033[0m\n";
-            printed.insert(path);
-            clean = false;
-        }
-    }
-
-    std::cout << "\nChanges not staged for commit:\n";
-
-    for (const auto& [path, blob] : working_directory) {
-        const ark::FileEntry* ent = idx.find(ark::RepoPath::fromRelative(path));
-        if (ent) {
-            ark::Blob fresh = ark::Blob::readFromFile(path);
-            std::string freshHash =
-                ark::ObjectStore::hashOf(ark::ObjectType::Blob, fresh.data).hex();
-
-            if (freshHash != ent->hash.hex() &&
-                printed.find(path) == printed.end()) {
-
-                std::cout << "\033[31m" << path << " (modified)\033[0m\n";
-                printed.insert(path);
-                clean = false;
-            }
-        }
-    }
-
-    std::cout << "\nUntracked files:\n";
-
-    for (const auto& [path, blob] : working_directory) {
-        bool not_in_index  = !idx.contains(ark::RepoPath::fromRelative(path));
-        bool not_in_commit = latest_committed_files.find(ark::RepoPath::fromRelative(path)) ==
-                           latest_committed_files.end();
-
-        if (not_in_index && not_in_commit &&
-            printed.find(path) == printed.end()) {
-
-            std::cout << "\033[31m" << path << " (untracked)\033[0m\n";
-            clean = false;
-        }
-    }
-
-    return clean;
+    ark::printStatus(ark::computeStatus(idx, latest_committed_files, worktree),
+                     std::cout);
+    return 0;
 }

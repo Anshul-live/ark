@@ -18,7 +18,6 @@ int cmd_switch(const std::vector<std::string> &args);
 int cmd_updateRef(const std::vector<std::string> &args);
 int cmd_writeTree(const std::vector<std::string> &args);
 
-bool status();
 void logBranch(const std::string &branchName);
 
 #endif

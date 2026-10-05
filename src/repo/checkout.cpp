@@ -1,5 +1,6 @@
-#include <ark/objects/checkout_legacy.h>
+#include <ark/repo/checkout.h>
 
+#include <ark/repo/repository.h>
 #include <ark/storage/object_format.h>
 #include <ark/storage/object_store.h>
 
@@ -9,7 +10,10 @@
 
 namespace ark {
 
-bool createFile(const std::string &path, FileMode mode,
+Checkout::Checkout(const Repository &repo, const ObjectStore &store)
+    : root_(repo.root()), store_(store) {}
+
+bool Checkout::createFile(const std::string &path, FileMode mode,
                 const std::string &data) {
   std::cout << "creating file " << path << "\n";
   std::filesystem::path p(path);
@@ -52,7 +56,7 @@ bool createFile(const std::string &path, FileMode mode,
   return false;
 }
 
-bool deleteFile(const std::string &path) {
+bool Checkout::removeFile(const std::string &path) {
   std::cout << "deleting file " << path << "\n";
   std::filesystem::path p(path);
   if (std::filesystem::exists(p)) {
@@ -66,8 +70,8 @@ bool deleteFile(const std::string &path) {
   return false;
 }
 
-bool overwriteFile(const std::string &path, FileMode mode,
-                   const std::string &data) {
+bool Checkout::overwriteFile(const std::string &path, FileMode mode,
+                           const std::string &data) {
   std::cout << "overwriting file " << path << "\n";
   std::filesystem::path p(path);
   if (!std::filesystem::exists(p)) {
@@ -85,43 +89,27 @@ bool overwriteFile(const std::string &path, FileMode mode,
   return true;
 }
 
-CheckoutPlan planCheckout(const FlatTree &from, const FlatTree &to,
-                          const std::string &root) {
-  CheckoutPlan plan;
-  auto fullPath = [&](const RepoPath &path) { return root + "/" + path.str(); };
-
-  for (const auto &[path, entry] : from) {
-    if (to.find(path) == to.end())
-      plan.remove.push_back({fullPath(path), entry});
-  }
-  for (const auto &[path, entry] : to) {
-    auto it = from.find(path);
-    if (it == from.end())
-      plan.create.push_back({fullPath(path), entry});
-    else if (it->second.hash != entry.hash)
-      plan.overwrite.push_back({fullPath(path), entry});
-  }
-  return plan;
+std::string Checkout::fullPath(const RepoPath &path) const {
+  return root_ + "/" + path.str();
 }
 
-namespace {
-
-std::string readBlobData(const ObjectStore &store, const ObjectHash &hash) {
-  std::string framed = store.readFramed(hash).value_or("");
+std::string Checkout::blobData(const ObjectHash &hash) const {
+  std::string framed = store_.readFramed(hash).value_or("");
   return parseObjectFrame(hash, framed).body;
 }
 
-} // namespace
-
-void applyCheckout(const CheckoutPlan &plan, const ObjectStore &store) {
-  for (const CheckoutChange &change : plan.remove)
-    deleteFile(change.path);
-  for (const CheckoutChange &change : plan.create)
-    createFile(change.path, change.entry.mode,
-               readBlobData(store, change.entry.hash));
-  for (const CheckoutChange &change : plan.overwrite)
-    overwriteFile(change.path, change.entry.mode,
-                  readBlobData(store, change.entry.hash));
+void Checkout::apply(const std::vector<FileChange> &changes) {
+  for (const FileChange &change : changes)
+    if (change.kind == ChangeKind::Deleted)
+      removeFile(fullPath(change.path));
+  for (const FileChange &change : changes)
+    if (change.kind == ChangeKind::Added)
+      createFile(fullPath(change.path), change.after->mode,
+                 blobData(change.after->hash));
+  for (const FileChange &change : changes)
+    if (change.kind == ChangeKind::Modified)
+      overwriteFile(fullPath(change.path), change.after->mode,
+                    blobData(change.after->hash));
 }
 
 } // namespace ark

@@ -1,15 +1,12 @@
 #ifndef REPOSITORY_HPP
 #define REPOSITORY_HPP
 
-#include <ark/objects/blob.h>
 #include <chrono>
 #include <ctime>
 #include <filesystem>
 #include <iomanip>
 #include <memory>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
 
 
 class Repository {
@@ -27,14 +24,6 @@ public:
   std::string logPath() const;
 
   bool isValid() const;
-
-  std::string getMode(const std::filesystem::path &path) const;
-
-  std::unordered_set<std::string> loadIgnorePatterns() const;
-  bool isIgnored(const std::string &path) const;
-
-  std::unordered_map<std::string, ark::Blob>
-  loadWorkingDirectoryWithoutIgnored() const;
 
 private:
   std::string findRoot() const;

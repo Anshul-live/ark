@@ -57,12 +57,16 @@ add_library(ark_core STATIC
     src/objects/tree.cpp
     src/objects/flat_tree.cpp
     src/objects/tree_builder.cpp
-    src/objects/checkout_legacy.cpp
+    src/objects/tree_diff.cpp
     src/repo/index.cpp
     src/repo/index_file.cpp
     src/repo/config.cpp
     src/repo/repository.cpp
     src/repo/ref_store.cpp
+    src/repo/checkout.cpp
+    src/repo/ignore_rules.cpp
+    src/repo/working_tree.cpp
+    src/repo/status.cpp
     src/util/logger.cpp
     src/util/strings.cpp
     src/util/fs.cpp
@@ -87,6 +91,7 @@ add_executable(test_ark
     tests/unit/objects_test.cpp
     tests/unit/commit_test.cpp
     tests/unit/tree_test.cpp
+    tests/unit/diff_test.cpp
     tests/unit/index_test.cpp
     tests/unit/config_test.cpp
     tests/unit/ref_test.cpp

@@ -3,7 +3,8 @@
 #include <fstream>
 #include <ark/repo/index.h>
 #include <iostream>
-#include <ark/objects/checkout_legacy.h>
+#include <ark/objects/tree_diff.h>
+#include <ark/repo/checkout.h>
 #include <ark/objects/commit.h>
 #include <ark/objects/commit_store.h>
 #include <ark/objects/flat_tree.h>
@@ -55,11 +56,11 @@ int cmd_switch(const std::vector<std::string> &args) {
   }
 
   ark::FlatTree targetFiles = filesOf(targetCommitHash);
-  ark::CheckoutPlan plan =
-      ark::planCheckout(sourceFiles, targetFiles, repo.root());
+  std::vector<ark::FileChange> changes =
+      ark::diffTrees(sourceFiles, targetFiles);
 
   ref.attachHeadTo(branch);
-  ark::applyCheckout(plan, store);
+  ark::Checkout(repo, store).apply(changes);
 
   Index idx;
   idx.clear();
