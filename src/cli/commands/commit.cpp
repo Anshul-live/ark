@@ -9,16 +9,15 @@
 #include <ark/storage/object_store.h>
 #include <iostream>
 
-int cmd_commit(const std::vector<std::string> &args) {
-  RefStore ref;
+int cmd_commit(const Repository &repo, const std::vector<std::string> &args) {
+  RefStore ref(repo);
   auto head = ref.resolveHead();
   std::string commitHash = head ? head->hex() : "";
 
-  Repository repo;
   ark::ObjectStore store(repo.objectsDir());
   ark::CommitStore commits(store);
 
-  if (!commitHash.empty() && commitHash != NULL_HASH) {
+  if (!commitHash.empty() && commitHash != ark::ObjectHash::zero().hex()) {
     commits.read(ark::ObjectHash::unchecked(commitHash));
   }
 
@@ -31,9 +30,9 @@ int cmd_commit(const std::vector<std::string> &args) {
   auto parentHead = ref.resolveHead();
   std::string parentCommitHash = parentHead ? parentHead->hex() : "";
 
-  Config config;
+  Config config(repo);
   config.load();
-  Index idx;
+  Index idx(repo);
   idx.load();
   ark::Commit commit;
   commit.tree = ark::writeTreeFromIndex(idx, store);

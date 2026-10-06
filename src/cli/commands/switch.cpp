@@ -13,14 +13,14 @@
 #include <ark/repo/repository.h>
 #include <ark/cli/commands.h>
 
-int cmd_switch(const std::vector<std::string> &args) {
+int cmd_switch(const Repository &repo, const std::vector<std::string> &args) {
   if (args.size() < 1) {
     std::cout << "Usage: ark switch <branch-name>\n";
     return 1;
   }
 
   const std::string &branchName = args[0];
-  RefStore ref;
+  RefStore ref(repo);
 
   const auto branch = ark::BranchName::unchecked(branchName);
 
@@ -40,11 +40,10 @@ int cmd_switch(const std::vector<std::string> &args) {
     return 0;
   }
 
-  Repository repo;
   ark::ObjectStore store(repo.objectsDir());
   ark::CommitStore commits(store);
   auto filesOf = [&](const std::string &hash) {
-    if (hash == NULL_HASH)
+    if (hash == ark::ObjectHash::zero().hex())
       return ark::FlatTree{};
     ark::Commit commit = commits.read(ark::ObjectHash::unchecked(hash));
     return ark::flattenTree(store, commit.tree);
@@ -62,7 +61,7 @@ int cmd_switch(const std::vector<std::string> &args) {
   ref.attachHeadTo(branch);
   ark::Checkout(repo, store).apply(changes);
 
-  Index idx;
+  Index idx(repo);
   idx.clear();
 
   idx.replaceAll(targetFiles);

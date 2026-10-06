@@ -4,9 +4,11 @@
 #include <ark/objects/flat_tree.h>
 #include <cstddef>
 
+class Repository;
+
 class Index {
 public:
-    Index();
+    explicit Index(const Repository& repo);
 
     void load();
     void save() const;
@@ -24,5 +26,6 @@ public:
     void clear();
 
 private:
+    const Repository* repo_;
     ark::FlatTree entries_;
 };

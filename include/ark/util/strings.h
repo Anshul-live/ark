@@ -7,7 +7,6 @@
 namespace ark::text {
 
 std::string trim(const std::string &s);
-std::string toLower(const std::string &s);
 
 // Drops a trailing empty token.
 std::vector<std::string> split(const std::string &s, char delimiter);

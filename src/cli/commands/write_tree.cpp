@@ -5,9 +5,8 @@
 #include <ark/repo/repository.h>
 #include <ark/storage/object_store.h>
 
-int cmd_writeTree(const std::vector<std::string> &args){
-  Repository repo;
-  Index idx;
+int cmd_writeTree(const Repository &repo, const std::vector<std::string> &args){
+  Index idx(repo);
   idx.load();
   ark::ObjectStore store(repo.objectsDir());
   std::cout << ark::writeTreeFromIndex(idx, store) << "\n";

@@ -85,55 +85,16 @@ public:
   std::string code() const override { return "BRANCH_EXISTS"; }
 };
 
-class CommitException : public ArkException {
-public:
-  CommitException(const std::string &message) : ArkException(message) {}
-  std::string code() const override { return "COMMIT_ERROR"; }
-};
-
-class NoCommitsException : public CommitException {
-public:
-  NoCommitsException() : CommitException("No commits found") {}
-  std::string code() const override { return "NO_COMMITS"; }
-};
-
 class ConfigException : public ArkException {
 public:
   ConfigException(const std::string &message) : ArkException(message) {}
   std::string code() const override { return "CONFIG_ERROR"; }
 };
 
-class ConfigNotFoundException : public ConfigException {
-public:
-  ConfigNotFoundException() : ConfigException("Configuration not found") {}
-  std::string code() const override { return "CONFIG_NOT_FOUND"; }
-};
-
-class InvalidConfigException : public ConfigException {
-public:
-  InvalidConfigException(const std::string &message)
-      : ConfigException("Invalid configuration: " + message) {}
-  std::string code() const override { return "INVALID_CONFIG"; }
-};
-
 class FileSystemException : public ArkException {
 public:
   FileSystemException(const std::string &message) : ArkException(message) {}
   std::string code() const override { return "FS_ERROR"; }
-};
-
-class FileNotFoundException : public FileSystemException {
-public:
-  FileNotFoundException(const std::string &path)
-      : FileSystemException("File not found: " + path) {}
-  std::string code() const override { return "FILE_NOT_FOUND"; }
-};
-
-class PermissionDeniedException : public FileSystemException {
-public:
-  PermissionDeniedException(const std::string &path)
-      : FileSystemException("Permission denied: " + path) {}
-  std::string code() const override { return "PERMISSION_DENIED"; }
 };
 
 #endif

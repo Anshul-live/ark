@@ -17,9 +17,8 @@ namespace {
 const std::string kSymbolicPrefix = "ref: ";
 const std::string kHeadsPrefix = "refs/heads/";
 
-std::string readHeadLine() {
+std::string readHeadLine(const Repository &repo) {
   try {
-    Repository repo;
     std::string headPath = repo.headPath();
     std::ifstream in(headPath);
     if (!in) {
@@ -36,9 +35,8 @@ std::string readHeadLine() {
   }
 }
 
-std::string readRefText(const std::string &refPath) {
+std::string readRefText(const Repository &repo, const std::string &refPath) {
   try {
-    Repository repo;
     std::string fullPath = repo.root() + "/.ark/" + refPath;
     std::ifstream in(fullPath);
     if (!in) {
@@ -61,9 +59,9 @@ std::optional<ObjectHash> hashFromText(const std::string &text) {
   return parsed ? *parsed : ObjectHash::unchecked(text);
 }
 
-void writeRefText(const std::string &refPath, const std::string &commitHash) {
+void writeRefText(const Repository &repo, const std::string &refPath,
+                  const std::string &commitHash) {
   try {
-    Repository repo;
     std::string fullPath = repo.root() + "/.ark/" + refPath;
     std::filesystem::create_directories(
         std::filesystem::path(fullPath).parent_path());
@@ -83,10 +81,10 @@ void writeRefText(const std::string &refPath, const std::string &commitHash) {
 
 } // namespace
 
-RefStore::RefStore() {}
+RefStore::RefStore(const Repository &repo) : repo_(repo) {}
 
 HeadTarget RefStore::readHead() const {
-  std::string line = readHeadLine();
+  std::string line = readHeadLine(repo_);
   if (line.rfind(kSymbolicPrefix, 0) == 0) {
     return RefName::unchecked(line.substr(kSymbolicPrefix.size()));
   }
@@ -137,13 +135,12 @@ void RefStore::moveHeadTo(const ObjectHash &commit) {
   try {
     HeadTarget head = readHead();
     if (const RefName *ref = std::get_if<RefName>(&head)) {
-      writeRefText(ref->str(), commit.hex());
+      writeRefText(repo_, ref->str(), commit.hex());
       LOG_INFO("Updated branch reference to: " + commit.hex());
       return;
     }
 
-    Repository repo;
-    std::string headPath = repo.headPath();
+    std::string headPath = repo_.headPath();
     std::ofstream out(headPath);
     if (!out) {
       LOG_ERROR("Failed to open HEAD file for writing: " + headPath);
@@ -167,8 +164,7 @@ void RefStore::attachHeadTo(const BranchName &branch) {
       throw BranchNotFoundException(branch.str());
     }
 
-    Repository repo;
-    std::string headPath = repo.headPath();
+    std::string headPath = repo_.headPath();
     std::ofstream out(headPath);
     if (!out) {
       LOG_ERROR("Failed to open HEAD file for writing: " + headPath);
@@ -187,16 +183,16 @@ void RefStore::attachHeadTo(const BranchName &branch) {
 }
 
 std::optional<ObjectHash> RefStore::readRef(const RefName &ref) const {
-  return hashFromText(readRefText(ref.str()));
+  return hashFromText(readRefText(repo_, ref.str()));
 }
 
 void RefStore::writeRef(const RefName &ref, const ObjectHash &commit) {
   LOG_INFO("Updating ref " + ref.str() + " to " + commit.hex());
-  writeRefText(ref.str(), commit.hex());
+  writeRefText(repo_, ref.str(), commit.hex());
 }
 
 std::optional<ObjectHash> RefStore::branchTarget(const BranchName &branch) const {
-  return hashFromText(readRefText(kHeadsPrefix + branch.str()));
+  return hashFromText(readRefText(repo_, kHeadsPrefix + branch.str()));
 }
 
 bool RefStore::branchExists(const BranchName &branch) const {
@@ -212,7 +208,7 @@ void RefStore::createBranch(const BranchName &branch, const ObjectHash &commit) 
       throw BranchExistsException(branch.str());
     }
 
-    writeRefText(kHeadsPrefix + branch.str(), commit.hex());
+    writeRefText(repo_, kHeadsPrefix + branch.str(), commit.hex());
     LOG_INFO("Branch created: " + branch.str());
   } catch (const BranchException &e) {
     LOG_EXCEPTION("RefStore::createBranch", e);
@@ -227,8 +223,7 @@ void RefStore::deleteBranch(const BranchName &branch) {
   LOG_INFO("Deleting branch: " + branch.str());
 
   try {
-    Repository repo;
-    std::string branchPath = repo.refsDir() + "/heads/" + branch.str();
+    std::string branchPath = repo_.refsDir() + "/heads/" + branch.str();
     if (!std::filesystem::exists(branchPath)) {
       LOG_ERROR("Branch not found: " + branch.str());
       throw BranchNotFoundException(branch.str());
@@ -248,8 +243,7 @@ std::vector<BranchName> RefStore::listBranches() const {
   std::vector<BranchName> branches;
 
   try {
-    Repository repo;
-    std::string refsPath = repo.refsDir() + "/heads/";
+    std::string refsPath = repo_.refsDir() + "/heads/";
 
     if (!std::filesystem::exists(refsPath)) {
       return branches;

@@ -5,7 +5,7 @@
 #include <ark/core/exceptions.h>
 #include <fstream>
 
-Index::Index() {}
+Index::Index(const Repository& repo) : repo_(&repo) {}
 
 bool Index::contains(const ark::RepoPath& path) const {
     return entries_.find(path) != entries_.end();
@@ -34,8 +34,7 @@ void Index::load() {
     LOG_DEBUG("Loading index");
 
     try {
-        Repository repo;
-        std::string idxFile = repo.indexPath();
+        std::string idxFile = repo_->indexPath();
         std::ifstream in(idxFile, std::ios::binary);
 
         if (!in) {
@@ -56,8 +55,7 @@ void Index::save() const {
     LOG_DEBUG("Saving index");
 
     try {
-        Repository repo;
-        std::string idxFile = repo.indexPath();
+        std::string idxFile = repo_->indexPath();
         std::ofstream out(idxFile, std::ios::binary);
 
         if (!out) {

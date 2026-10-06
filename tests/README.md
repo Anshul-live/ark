@@ -17,7 +17,7 @@ cmake -S . -B build-asan -DARK_SANITIZE=ON && cmake --build build-asan -j && ./b
 | Dir | What | How |
 |---|---|---|
 | `support/` | Sandbox, process runner, oracle | shared by everything |
-| `unit/` | compress, objects, index, config, refs, repository, logger | calls Ark's classes in-process inside a temp repo |
+| `unit/` | compress, core types, objects, object store, trees and diffs, index, config, refs, repository, logger | calls Ark's classes in-process inside a temp repo (a fixture owns a `Repository` and passes it to `Index`, `Config`, `RefStore`) |
 | `cli/` | init, plumbing, add, commit, status, branch/switch, log | runs the real `ark` binary, checks exit code, stdout, stderr and the on-disk result |
 | `property/` | random branch histories | generates trees, commits several branches, then switches between them in random order and checks every snapshot byte for byte |
 
@@ -39,7 +39,7 @@ ARK_KEEP_TMP=1 ...                                                  # keep the s
 
 ## Known-failing tests
 
-These tests describe **correct** behavior and fail until the matching bug in `tmp/bugs/` is fixed. As of `694e2a1`, 86 pass and 54 fail. Fixing #01 and #02 turns most of the switch, status and random-history tests green.
+These tests describe **correct** behavior and fail until the matching bug in `tmp/bugs/` is fixed. The suite has 184 tests; 142 pass and 42 fail. Fixing #01 and #02 turns most of the switch, status and random-history tests green.
 
 | Bug | Tests |
 |---|---|

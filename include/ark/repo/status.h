@@ -15,10 +15,6 @@ struct StatusReport {
   std::vector<RepoPath> staged;
   std::vector<RepoPath> modified;
   std::vector<RepoPath> untracked;
-
-  bool isClean() const {
-    return staged.empty() && modified.empty() && untracked.empty();
-  }
 };
 
 StatusReport computeStatus(const Index &index, const FlatTree &headTree,

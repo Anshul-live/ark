@@ -9,7 +9,7 @@
 #include <ark/objects/blob.h>
 #include <ark/storage/object_store.h>
 
-int cmd_hashObject(const std::vector<std::string> &args){
+int cmd_hashObject(const Repository &, const std::vector<std::string> &args){
         if(args.size() < 1){
             std::cout << "Usage: hash-object <filename>" << std::endl;
             return 1;

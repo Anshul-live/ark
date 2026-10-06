@@ -12,20 +12,19 @@
 #include <ark/storage/object_store.h>
 #include <iostream>
 
-int cmd_status(const std::vector<std::string> &args){
-    Repository repo;
+int cmd_status(const Repository &repo, const std::vector<std::string> &args){
     ark::IgnoreRules ignore = ark::IgnoreRules::load(repo);
     ark::FlatTree worktree = ark::WorkingTree(repo, ignore).scan();
 
-    Index idx;
+    Index idx(repo);
     idx.load();
 
-    RefStore ref;
+    RefStore ref(repo);
     auto head = ref.resolveHead();
     std::string commitHash = head ? head->hex() : "";
 
     ark::FlatTree latest_committed_files;
-    if (!commitHash.empty() && commitHash != NULL_HASH) {
+    if (!commitHash.empty() && commitHash != ark::ObjectHash::zero().hex()) {
         ark::ObjectStore store(repo.objectsDir());
         ark::Commit commit =
             ark::CommitStore(store).read(ark::ObjectHash::unchecked(commitHash));

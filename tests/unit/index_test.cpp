@@ -28,12 +28,13 @@ protected:
   }
 
   Index reloaded() {
-    Index idx;
+    Index idx(repo_);
     idx.load();
     return idx;
   }
 
   TempDir tmp_;
+  Repository repo_;
   std::unique_ptr<CwdGuard> cwd_;
 };
 
@@ -44,7 +45,7 @@ TEST_F(IndexTest, FreshRepositoryHasEmptyIndex) {
 }
 
 TEST_F(IndexTest, SaveThenLoadRoundTripsEveryEntry) {
-  Index idx;
+  Index idx(repo_);
   idx.stage(path("a.txt"), entry('a', "100644"));
   idx.stage(path("dir/b.sh"), entry('b', "100755"));
   idx.stage(path("dir/sub/link"), entry('c', "120000"));
@@ -55,7 +56,7 @@ TEST_F(IndexTest, SaveThenLoadRoundTripsEveryEntry) {
 }
 
 TEST_F(IndexTest, StagingSamePathReplacesEntry) {
-  Index idx;
+  Index idx(repo_);
   idx.stage(path("a"), entry('1', "100644"));
   idx.stage(path("a"), entry('2', "100755"));
   ASSERT_EQ(idx.size(), 1u);
@@ -64,7 +65,7 @@ TEST_F(IndexTest, StagingSamePathReplacesEntry) {
 }
 
 TEST_F(IndexTest, EraseDropsEntriesAndPersists) {
-  Index idx;
+  Index idx(repo_);
   idx.stage(path("keep"), entry('a', "100644"));
   idx.stage(path("gone1"), entry('1', "100644"));
   idx.stage(path("gone2"), entry('2', "100644"));
@@ -79,12 +80,12 @@ TEST_F(IndexTest, EraseDropsEntriesAndPersists) {
 }
 
 TEST_F(IndexTest, FindReturnsNullForUnknownPath) {
-  Index idx;
+  Index idx(repo_);
   EXPECT_EQ(idx.find(path("nope")), nullptr);
 }
 
 TEST_F(IndexTest, ReplaceAllReplacesAndStageAllMerges) {
-  Index idx;
+  Index idx(repo_);
   idx.stage(path("old"), entry('e', "100644"));
   idx.replaceAll({{path("new"), entry('d', "100644")}});
   EXPECT_FALSE(idx.contains(path("old")));
@@ -97,7 +98,7 @@ TEST_F(IndexTest, ReplaceAllReplacesAndStageAllMerges) {
 }
 
 TEST_F(IndexTest, ManyEntriesRoundTrip) {
-  Index idx;
+  Index idx(repo_);
   for (int i = 0; i < 2000; i++) {
     idx.stage(path("d" + std::to_string(i % 17) + "/f" + std::to_string(i)),
               entry("0123456789abcdef"[i % 16], i % 3 ? "100644" : "100755"));
@@ -108,7 +109,7 @@ TEST_F(IndexTest, ManyEntriesRoundTrip) {
 
 // tmp/bugs/05
 TEST_F(IndexTest, PathsWithSpacesRoundTrip) {
-  Index idx;
+  Index idx(repo_);
   idx.stage(path("my file.txt"), entry('a', "100644"));
   idx.stage(path("dir with spaces/x  y.txt"), entry('b', "100644"));
   idx.stage(path("after.txt"), entry('c', "100644"));

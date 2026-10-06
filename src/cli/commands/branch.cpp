@@ -5,8 +5,8 @@
 #include <ark/cli/commit_message_editor.h>
 #include <ark/repo/ref_store.h>
 
-int cmd_branch(const std::vector<std::string> &args){
-  RefStore ref;
+int cmd_branch(const Repository &repo, const std::vector<std::string> &args){
+  RefStore ref(repo);
   
   if(args.size() < 1){
       auto branches = ref.listBranches();
@@ -25,7 +25,7 @@ int cmd_branch(const std::vector<std::string> &args){
   std::string name = args[0];
   auto head = ref.resolveHead();
   
-  if(!head || head->hex() == NULL_HASH){
+  if(!head || head->isZero()){
     std::cerr << "please make a commit first";
     return 1;
   }

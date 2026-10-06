@@ -9,15 +9,14 @@
 #include <iostream>
 #include <algorithm>
 
-Config::Config() {}
+Config::Config(const Repository& repo) : repo_(&repo) {}
 
 void Config::load() {
     data.clear();
     LOG_INFO("Loading configuration");
     
     try {
-        Repository repo;
-        loadFromFile(repo.configPath());
+        loadFromFile(repo_->configPath());
         loadFromFile("~/.arkconfig");
         loadFromFile("~/config/ark/config");
         LOG_INFO("Configuration loaded successfully");
@@ -31,8 +30,7 @@ void Config::save() {
     LOG_INFO("Saving configuration");
     
     try {
-        Repository repo;
-        std::string configPath = repo.configPath();
+        std::string configPath = repo_->configPath();
         std::ofstream out(configPath);
         if (!out) {
             LOG_ERROR("Failed to open config file for writing: " + configPath);

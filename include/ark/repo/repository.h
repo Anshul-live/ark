@@ -12,6 +12,7 @@
 class Repository {
 public:
   Repository();
+  static Repository discover() { return Repository(); }
   ~Repository();
 
   std::string root() const;

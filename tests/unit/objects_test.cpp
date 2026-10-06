@@ -30,7 +30,7 @@ std::string storeFile(const std::string &path) {
 std::string writeTree() {
   Repository repo;
   ark::ObjectStore store(repo.objectsDir());
-  Index idx;
+  Index idx(repo);
   idx.load();
   return ark::writeTreeFromIndex(idx, store).hex();
 }
@@ -57,6 +57,7 @@ protected:
   fs::path repo() const { return tmp_.path(); }
 
   TempDir tmp_;
+  Repository repo_;
   std::unique_ptr<CwdGuard> cwd_;
 };
 
@@ -97,7 +98,7 @@ TEST_F(ObjectsTest, WrittenBlobIsStoredUnderFanoutPathAndVerifies) {
 TEST_F(ObjectsTest, TreeWriteMatchesIndexContents) {
   const std::map<std::string, std::string> files = {
       {"a.txt", "A"}, {"d/b.txt", "B"}, {"d/e/c.txt", "C"}, {"z.txt", "Z"}};
-  Index idx;
+  Index idx(repo_);
   for (const auto &[path, content] : files) {
     writeFile(path, content);
     stageBlob(idx, path, storeFile(path));
@@ -117,7 +118,7 @@ TEST_F(ObjectsTest, TreeWriteMatchesIndexContents) {
 TEST_F(ObjectsTest, LoadedTreeFlattensToFullPathsOfEveryBlob) {
   const std::map<std::string, std::string> files = {
       {"a.txt", "A"}, {"b.txt", "B"}, {"d/a.txt", "dA"}, {"d/e/c.txt", "C"}};
-  Index idx;
+  Index idx(repo_);
   for (const auto &[path, content] : files) {
     writeFile(path, content);
     stageBlob(idx, path, storeFile(path));
@@ -148,7 +149,7 @@ TEST_F(ObjectsTest, TreeHashDoesNotDependOnStagingOrder) {
     writeFile(names.back(), std::string(1, c));
   }
   auto treeFor = [&](const std::vector<std::string> &order) {
-    Index idx;
+    Index idx(repo_);
     for (const auto &n : order) {
       stageBlob(idx, n, storeFile(n));
     }
@@ -162,7 +163,7 @@ TEST_F(ObjectsTest, TreeHashDoesNotDependOnStagingOrder) {
 // tmp/bugs/25
 TEST_F(ObjectsTest, CommitCreateRecordsTreeParentsAndMessage) {
   writeFile("f", "x");
-  Index idx;
+  Index idx(repo_);
   stageBlob(idx, "f", storeFile("f"));
   idx.save();
   const std::string tree = writeTree();

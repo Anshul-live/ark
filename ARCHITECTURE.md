@@ -15,53 +15,39 @@ Ark is a Git-like version control system implemented in C++. It demonstrates how
 
 ## Object Model
 
+Every object is stored zlib-compressed at `.ark/objects/<first 2 hex chars>/<remaining 62>`. Its id is the SHA-256 of the uncompressed frame:
+
+```
+<type> <body size in bytes>\0<body>
+```
+
+`type` is `blob`, `tree` or `commit`.
+
 ### Blob
 
-A Blob represents the contents of a file. When you add a file, Ark:
-
-1. Reads the file content
-2. Creates a blob with Git-style header: `blob <size>\0<content>`
-3. Computes SHA-256 hash of the content
-4. Compresses using zlib
-5. Stores at `.ark/objects/<first-2-chars>/<remaining-hash>`
-
-```
-Format: blob <size>\0<content>
-Example: blob 12\0Hello World
-```
+The body is the raw file content. Example frame: `blob 11\0Hello World`.
 
 ### Tree
 
-A Tree represents a directory snapshot. It contains:
-- File mode (100644, 100755, 120000)
-- Object hash (blob or subtree)
-- Filename
+The body has one line per entry, sorted by name. Each line is `<mode> <type> <hash> <name>`, where `type` is `blob` or `tree`:
 
 ```
-Format: <mode> <hash> <filename>
-Example: 100644 abc123...  file.txt
-         040000 def456...  subdir/
+100644 blob 3f2a...e1 file.txt
+040000 tree 9c0b...77 subdir
 ```
 
 ### Commit
 
-A Commit represents a snapshot of the entire repository. It contains:
-- Tree hash - root directory structure
-- Parent commit hash(es) - for history and merging
-- Author - name and email from config
-- Committer - same as author
-- Timestamp
-- Commit message
+The body is written by `Commit::serialize`, in this order:
 
 ```
-Format:
 tree <tree-hash>
-parent <parent-hash>
-author <name> <email> <timestamp>
-committer <name> <email> <timestamp>
-
-<commit-message>
+parent <parent-hash>        (one line per parent, may be absent)
+committer <name> <<email>> <unix-time> <utc-offset>
+<message>
 ```
+
+There is no author line. A root commit written by `ark commit` currently records a zero hash as its parent (known bug).
 
 ---
 
@@ -122,96 +108,46 @@ User runs: ark switch feature
 
 ---
 
-## Core Classes
+## Classes
 
-### Repository (`repository.h`)
+Public headers live in `include/ark/<module>/`, sources in `src/<module>/`, and one file per command in `src/cli/commands/`.
 
-Manages repository paths and utilities:
+| Module | Classes and functions |
+|---|---|
+| `core` | `ObjectHash`, `ObjectType`, `FileMode`, `RepoPath`, `RefName` / `BranchName`, exception hierarchy |
+| `storage` | `ObjectStore` (read, write, `hashOf`), `frameObject` / `parseObjectFrame`, zlib `compressObject` / `decompressObject`, `sha256` |
+| `objects` | `Blob`, `Tree`, `Commit`, `CommitStore`, `CommitDAG` (`historyFrom`), `FlatTree` and `flattenTree`, `TreeBuilder` / `writeTreeFromIndex`, `diffTrees` |
+| `repo` | `Repository`, `Index`, `IndexFile`, `Config`, `RefStore`, `IgnoreRules`, `WorkingTree`, `Checkout`, `computeStatus` / `printStatus` |
+| `cli` | `cmd_*` command functions, `CommitMessageEditor` |
+| `util` | `Logger`, string helpers, filesystem helpers, time helpers |
 
-```cpp
-class Repository {
-    std::string root();           // Repository root path
-    std::string objectsDir();    // .ark/objects
-    std::string indexPath();      // .ark/index
-    std::string configPath();     // .ark/config
-    std::string headPath();      // .ark/HEAD
-    std::string refsDir();       // .ark/refs
-    
-    bool isValid();              // Check if .ark exists
-    std::string getMode();       // Get file mode (100644, etc.)
-    bool isIgnored();            // Check .arkignore
-};
-```
+### Dependency injection
 
-### Ref (`ref.h`)
+`main` builds one `Repository` with `Repository::discover()` and passes it to every command as `int cmd_x(const Repository& repo, const std::vector<std::string>& args)`; only `cmd_init` takes no repository. `Index`, `Config` and `RefStore` take the `Repository` in their constructor and keep a reference to it. `Repository` resolves its root lazily from the current directory, so a missing repository is reported (`Not inside an Ark repository`, exit 1) when a command first needs a path.
 
-Manages HEAD and branches:
+### Repository
 
-```cpp
-class Ref {
-    std::string getHeadCommit();      // Get current commit hash
-    std::string getCurrentBranchName(); // Get branch name
-    bool isDetached();                // Is HEAD detached?
-    
-    void setHeadToCommit();           // Move HEAD to commit
-    void setHeadToBranch();           // Switch to branch
-    
-    bool branchExists();               // Check if branch exists
-    void createBranch();               // Create new branch
-    void deleteBranch();               // Delete branch
-    std::vector<std::string> listBranches();
-};
-```
+Paths and root discovery: `root()`, `arkPath()`, `objectsDir()`, `indexPath()`, `configPath()`, `headPath()`, `refsDir()`, `isValid()`.
 
-### Index (`index.h`)
+### RefStore
 
-Manages staging area:
+HEAD and branches: `readHead`, `resolveHead`, `currentBranch`, `isHeadDetached`, `moveHeadTo`, `attachHeadTo`, `readRef`, `writeRef`, `branchTarget`, `branchExists`, `createBranch`, `deleteBranch`, `listBranches`.
 
-```cpp
-class Index {
-    void load();           // Read .ark/index
-    void save();           // Write .ark/index
-    
-    void stage(path, hash, mode);  // Add to staging
-    void unstage(path);           // Remove from staging
-    
-    bool contains(path);   // Is file staged?
-    get(path);            // Get index entry
-};
-```
+### Index
 
-### Config (`config.h`)
+The staging area, held as a `FlatTree` (path to `FileEntry{hash, mode}`): `load`, `save`, `stage`, `stageAll`, `replaceAll`, `erase`, `contains`, `find`, `entries`, `size`, `clear`.
 
-Manages user configuration:
+### CommitDAG
 
-```cpp
-class Config {
-    void load();          // Load from .ark/config
-    void save();          // Save to .ark/config
-    
-    getUserName();        // Get configured name
-    getUserEmail();       // Get configured email
-    hasUserConfig();      // Check if configured
-};
-```
+`historyFrom(start)` walks parents breadth-first and returns the hashes in the order `ark log` prints them. There is no visited set, so a commit reachable along two paths appears twice (known bug).
 
-### Logger (`logger.h`)
+### Config
 
-Provides logging functionality:
+`load`, `save`, `getUserName`, `getUserEmail`, `setUserName`, `setUserEmail`, `hasUserConfig`.
 
-```cpp
-class Logger {
-    void init(path);           // Initialize with log file
-    void setLevel(LEVEL);      // Set min log level
-    void setConsoleOutput(bool); // Enable/disable console
-    
-    void debug(msg);
-    void info(msg);
-    void warning(msg);
-    void error(msg);
-    void fatal(msg);
-};
-```
+### Logger
+
+Singleton: `init(path)`, `setLevel`, `setConsoleOutput`, and `debug` / `info` / `warning` / `error` / `fatal`, usually through the `LOG_*` macros.
 
 ---
 
@@ -219,22 +155,18 @@ class Logger {
 
 ### .ark/objects/
 
-Objects stored as: `objects/<prefix>/<hash>`
-
-- First 2 chars of hash as directory name
-- Remaining 62 chars as filename
-- Content compressed with zlib
-- Format: `<type> <size>\0<data>`
+Objects are stored as described under Object Model.
 
 ### .ark/index
 
-Text format: `<mode> <hash> <filename>`
+Written by `IndexFile::write`, one line per path, sorted by path: `<mode> <hash> <path>`.
 
 ```
 100644 abc123...  file.txt
 100755 def456...  script.sh
-040000 ghi789...  subdir/
 ```
+
+Directories are not stored; only files and symlinks. The reader splits on whitespace, so paths with spaces do not round-trip (known bug).
 
 ### .ark/HEAD
 
@@ -288,6 +220,7 @@ ArkException (base)
 │   └── NotARepositoryException
 ├── ObjectException
 │   ├── ObjectNotFoundException
+│   ├── ObjectFormatException
 │   └── InvalidObjectException
 ├── IndexException
 │   └── IndexCorruptedException
@@ -295,33 +228,19 @@ ArkException (base)
 │   ├── BranchNotFoundException
 │   └── BranchExistsException
 ├── ConfigException
-├── FileSystemException
-│   ├── FileNotFoundException
-│   └── PermissionDeniedException
+└── FileSystemException
 ```
 
 ---
 
 ## Testing
 
-### Unit Tests (Google Test)
-
 ```bash
 cd build
 ./test_ark
 ```
 
-- 40 unit tests covering all core classes
-- Tests for Logger, Config, Repository, Ref, Index, Objects
-
-### End-to-End Tests (Shell)
-
-```bash
-./tests/test_e2e.sh
-```
-
-- 25 comprehensive workflow tests
-- Tests init, add, commit, branch, switch, log, status
+The suite has 184 tests in 30 suites: unit tests that call the classes in-process inside a temporary repository, CLI tests that run the real `ark` binary, and randomized branch-history tests. 142 pass and 42 fail; the failures are tests that describe correct behaviour for bugs that are still open. See `tests/README.md` for the layout and the list of known failures.
 
 ---
 
@@ -329,27 +248,22 @@ cd build
 
 ```
 ark/
+├── include/ark/
+│   ├── core/       # value types and exceptions
+│   ├── storage/    # object store, framing, compression, sha256
+│   ├── objects/    # blob, tree, commit, commit store, commit DAG, tree diff
+│   ├── repo/       # repository, index, config, refs, working tree, checkout, status
+│   ├── cli/        # command declarations, commit message editor
+│   └── util/       # logger, strings, fs, time
 ├── src/
-│   ├── main.cpp              # Entry point
-│   ├── commands/            # CLI commands
-│   │   ├── init.cpp
-│   │   ├── add.cpp
-│   │   ├── commit.cpp
-│   │   ├── branch.cpp
-│   │   ├── switch.cpp
-│   │   └── ...
-│   └── utils/              # Core utilities
-│       ├── objects.cpp     # Blob, Tree, Commit
-│       ├── repository.cpp  # Repository class
-│       ├── ref.cpp         # Ref class
-│       ├── index.cpp       # Index class
-│       ├── config.cpp      # Config class
-│       ├── logger.cpp      # Logger class
-│       └── compress.cpp    # zlib compression
-├── include/                # Headers
-├── tests/                 # Test files
-│   ├── test_*.cpp         # Unit tests
-│   └── test_e2e.sh        # E2E tests
+│   ├── main.cpp    # entry point and command table
+│   ├── <module>/   # implementations matching include/ark/<module>
+│   └── cli/commands/   # one file per command (merge.cpp is not built yet)
+├── tests/
+│   ├── support/    # sandbox, process runner, independent oracle
+│   ├── unit/
+│   ├── cli/
+│   └── property/
 └── CMakeLists.txt
 ```
 

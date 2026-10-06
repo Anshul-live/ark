@@ -9,7 +9,7 @@
 #include <ark/repo/repository.h>
 #include <sstream>
 
-int cmd_catFile(const std::vector<std::string> &args) {
+int cmd_catFile(const Repository &repo, const std::vector<std::string> &args) {
   if (args.size() < 1) {
     std::cout << "Usage: cat-file <object-hash>" << std::endl;
     return 1;
@@ -21,7 +21,6 @@ int cmd_catFile(const std::vector<std::string> &args) {
     return 1;
   }
 
-  Repository repo;
   ark::ObjectStore store(repo.objectsDir());
   ark::ObjectHash hash = ark::ObjectHash::unchecked(object_hash);
 

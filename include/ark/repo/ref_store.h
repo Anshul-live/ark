@@ -3,13 +3,14 @@
 
 #include <ark/core/object_hash.h>
 #include <ark/core/ref_name.h>
+#include <ark/repo/repository.h>
 
 #include <optional>
 #include <vector>
 
 class RefStore {
 public:
-    RefStore();
+    explicit RefStore(const Repository& repo);
 
     ark::HeadTarget readHead() const;
     std::optional<ark::ObjectHash> resolveHead() const;
@@ -28,6 +29,9 @@ public:
     void deleteBranch(const ark::BranchName& branch);
 
     std::vector<ark::BranchName> listBranches() const;
+
+private:
+    const Repository& repo_;
 };
 
 #endif

@@ -31,7 +31,8 @@ protected:
 
   TempDir tmp_;
   std::unique_ptr<CwdGuard> cwd_;
-  RefStore ref_;
+  Repository repo_;
+  RefStore ref_{repo_};
 };
 
 } // namespace

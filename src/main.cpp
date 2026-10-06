@@ -10,7 +10,8 @@
 #include <ark/repo/repository.h>
 #include <unordered_map>
 
-using CommandFn = std::function<int(const std::vector<std::string> &)>;
+using CommandFn =
+    std::function<int(const Repository &, const std::vector<std::string> &)>;
 
 static void configureLogging() {
   try {
@@ -30,19 +31,17 @@ int main(int argc, char *argv[]) {
 
     std::string cmd = argv[1];
 
+    Repository repo = Repository::discover();
+
     if (cmd != "init") {
-      try {
-        Repository repo;
-        configureLogging();
-      } catch (const NotARepositoryException &) {
-      } catch (const std::exception &e) {
-        LOG_EXCEPTION("main", e);
-        return 0;
-      }
+      configureLogging();
     }
 
     std::unordered_map<std::string, CommandFn> commands = {
-        {"init", cmd_init},
+        {"init",
+         [](const Repository &, const std::vector<std::string> &args) {
+           return cmd_init(args);
+         }},
         {"hash-object", cmd_hashObject},
         {"cat-file", cmd_catFile},
         {"write-tree", cmd_writeTree},
@@ -63,14 +62,10 @@ int main(int argc, char *argv[]) {
       return 1;
     }
 
-    int result = it->second(args);
+    int result = it->second(repo, args);
 
     if (cmd == "init" && result == 0) {
-      try {
-        Repository repo;
-        configureLogging();
-      } catch (...) {
-      }
+      configureLogging();
     }
 
     return result;

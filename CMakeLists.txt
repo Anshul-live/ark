@@ -53,6 +53,7 @@ add_library(ark_core STATIC
     src/storage/object_store.cpp
     src/objects/commit.cpp
     src/objects/commit_store.cpp
+    src/objects/commit_dag.cpp
     src/objects/blob.cpp
     src/objects/tree.cpp
     src/objects/flat_tree.cpp

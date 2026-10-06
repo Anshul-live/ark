@@ -5,9 +5,11 @@
 #include <unordered_map>
 #include <vector>
 
+class Repository;
+
 class Config {
 public:
-    Config();
+    explicit Config(const Repository& repo);
     void load();
     void save();
 
@@ -19,6 +21,7 @@ public:
     bool hasUserConfig() const;
 
 private:
+    const Repository* repo_;
     std::unordered_map<std::string, std::unordered_map<std::string, std::vector<std::string>>> data;
     
     void loadFromFile(const std::string& path);

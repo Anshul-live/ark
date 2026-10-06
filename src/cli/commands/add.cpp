@@ -15,7 +15,7 @@
 #include <ark/core/file_mode.h>
 #include <ark/util/fs.h>
 
-int cmd_add(const std::vector<std::string>& args) {
+int cmd_add(const Repository& repo, const std::vector<std::string>& args) {
     if(args.size() < 1){
             std::cout << "Usage:  add <filename>/<dirname> ..." << std::endl;
             return 1;
@@ -26,10 +26,9 @@ int cmd_add(const std::vector<std::string>& args) {
       paths.push_back(path);
     }
 
-    Repository repo;
     ark::IgnoreRules ignore = ark::IgnoreRules::load(repo);
     ark::WorkingTree tree(repo, ignore);
-    Index idx;
+    Index idx(repo);
     idx.load();
 
     for (const std::string& path : paths) {

@@ -7,7 +7,7 @@
 #include <ark/storage/object_store.h>
 #include <iostream>
 
-int cmd_commitTree(const std::vector<std::string> &args){
+int cmd_commitTree(const Repository &repo, const std::vector<std::string> &args){
   int argc = args.size();
     if(argc < 1){
             std::cout << "Usage: commit-tree <tree-hash> [<parent1-hash>] [<parent2-hash>]" << std::endl;
@@ -17,12 +17,11 @@ int cmd_commitTree(const std::vector<std::string> &args){
         std::string parent2_hash = argc > 2 ? args[3] : "";
         std::string message = argc > 3 ? args[4] : "";
 
-        Repository repo;
         ark::ObjectStore store(repo.objectsDir());
         ark::ObjectHash tree = ark::ObjectHash::unchecked(args[0]);
         ark::flattenTree(store, tree);
 
-        Config config;
+        Config config(repo);
         config.load();
         if (!config.hasUserConfig()) {
           std::cerr << "please provide user.name and user.email before committing.\n";
