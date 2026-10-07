@@ -1,6 +1,7 @@
 #include "support/ark_test.h"
 
 #include <ark/core/exceptions.h>
+#include <ark/objects/blob.h>
 #include <ark/storage/object_format.h>
 #include <ark/storage/object_store.h>
 #include <ark/storage/sha256.h>
@@ -70,4 +71,9 @@ TEST(ObjectFormatTest, ParseRejectsMalformedFrames) {
 TEST(Sha256Test, KnownVector) {
   EXPECT_EQ(ark::sha256Hex("abc"),
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+}
+
+// tmp/bugs/10
+TEST(BlobReadTest, TryReadReturnsNothingForMissingFile) {
+  EXPECT_FALSE(ark::Blob::tryReadFromFile("/nonexistent/ark/blob.txt").has_value());
 }

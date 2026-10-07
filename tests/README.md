@@ -39,25 +39,25 @@ ARK_KEEP_TMP=1 ...                                                  # keep the s
 
 ## Known-failing tests
 
-These tests describe **correct** behavior and fail until the matching bug in `tmp/bugs/` is fixed. The suite has 184 tests; 142 pass and 42 fail. Fixing #01 and #02 turns most of the switch, status and random-history tests green.
+These tests describe **correct** behavior and fail until the matching bug in `tmp/bugs/` is fixed. Status on `refactor/clean-architecture`: the suite has 184 tests; 142 pass and 42 fail. On `main` (140 tests at that commit) 87 pass and 53 fail; the refactor fixed bugs 01, 02, 04 and the `add` half of 10 (11 tests that failed on `main` now pass).
 
-| Bug | Tests |
+| Bug | Tests (failing unless stated) |
 |---|---|
-| 01 header not stripped | `Branching.SwitchReproducesTheTargetSnapshotExactly`, `Branching.StatusIsCleanAfterSwitch`, `Branching.SwitchAppliesModeOnlyChanges`, `StatusTest.CleanRightAfterCommit`, `StatusTest.ShowsUnstagedModificationOfTrackedFile`, `StatusTest.StagedModificationIsReportedOnceAsStaged`, `ObjectsTest.LoadedTreeFlattensToFullPathsOfEveryBlob`, all `RandomHistory` |
-| 02 flatten uses basenames | `Branching.IndexMatchesTargetCommitAfterSwitch`, `Branching.CommitAfterSwitchBuildsOnTheTargetTree` (+ most of the 01 list) |
+| 01 header not stripped | Fixed (the repro passes on `main` too, but these tests also depend on 02); these now pass: `Branching.SwitchReproducesTheTargetSnapshotExactly`, `Branching.StatusIsCleanAfterSwitch`, `StatusTest.CleanRightAfterCommit`, `StatusTest.ShowsUnstagedModificationOfTrackedFile`, `StatusTest.StagedModificationIsReportedOnceAsStaged`, `ObjectsTest.LoadedTreeFlattensToFullPathsOfEveryBlob`. `Branching.SwitchAppliesModeOnlyChanges` still fails (tracked under 18). All `RandomHistory` seeds still fail, now at `add .` staging `.ark.log`/`.ark` files (06) |
+| 02 flatten uses basenames | Fixed by the refactor; `Branching.IndexMatchesTargetCommitAfterSwitch` and `Branching.CommitAfterSwitchBuildsOnTheTargetTree` now pass |
 | 03 switch discards work | `Branching.SwitchRefusesToOverwriteUncommittedChanges`, `Branching.SwitchNeverDropsStagedChanges` |
-| 04 nondeterministic trees | `ObjectsTest.TreeHashDoesNotDependOnStagingOrder`, `PlumbingDeterminism.TreeHashDoesNotDependOnStagingOrder` |
-| 05 spaces in paths | `IndexTest.PathsWithSpacesRoundTrip`, `Add.PathsWithSpacesAreStagedExactly` |
+| 04 nondeterministic trees | Fixed by the refactor; `ObjectsTest.TreeHashDoesNotDependOnStagingOrder` and `PlumbingDeterminism.TreeHashDoesNotDependOnStagingOrder` now pass |
+| 05 spaces in paths | `IndexTest.PathsWithSpacesRoundTrip`, `Add.PathsWithSpacesAreStagedExactly` (on the refactor the index loads with "Index file is corrupted" once it has two or more entries) |
 | 06 `.ark` gets staged | `Add.DotNeverStagesRepositoryMetadata`, `StatusMetadata.NeverListsRepositoryMetadata`, `RepositoryTest.WorkingDirectoryScanNeverIncludesArkMetadata` |
 | 07 `.ark.log` in cwd | `Init.DoesNotCreateLogFilesInTheWorkingDirectory` |
 | 08 ref name validation | `RefTest.RejectsBranchNamesThatEscapeRefs`, `Branching.RejectsBranchNamesThatEscapeRefs`, `Plumbing.UpdateRefRejectsPathsOutsideRefs`, `Plumbing.UpdateRefRejectsHashesThatAreNotCommits` |
 | 09 add outside repo | `Add.RejectsPathsOutsideTheRepository` |
-| 10 Blob read errors | `Add.UnreadableFileFailsCleanly`, `Plumbing.HashObjectOfMissingFileFails` |
+| 10 Blob read errors | `Add.UnreadableFileFailsCleanly` is fixed by the refactor and now passes. Still failing: `Plumbing.HashObjectOfMissingFileFails` (`hash-object` exits 0 and prints the empty-blob hash) |
 | 11 commit-tree args | `Plumbing.CommitTreeRecordsTheGivenParent`, `Log.MergeHistoryListsEachCommitOnce` |
 | 12 exit codes | `Commit.FailsWithoutIdentityAndLeavesHeadUnchanged` |
 | 13 global config | `ConfigTest.ReadsGlobalConfigFromHome`, `ConfigTest.ReadsXdgConfig`, `ConfigTest.RepoConfigOverridesGlobal`, `Commit.UsesGlobalIdentityFromHome` |
 | 14 deletions | `Add.StagesDeletionOfATrackedFile`, `Add.DotStagesDeletions`, `StatusTest.ShowsDeletedFiles` |
-| 15 status from subdir | `StatusTest.SameResultFromASubdirectory` |
+| 15 status from subdir | `StatusTest.SameResultFromASubdirectory` (the `status` error itself is fixed; the test still fails because `d/.ark.log` is listed as untracked, see 07) |
 | 16 empty commits | `Commit.NothingToCommitIsRefused`, `Commit.NothingStagedInFreshRepoIsRefused` |
 | 17 logs on stdout | `Logger.ConsoleOutputNeverGoesToStdout`, `Plumbing.WriteTreePrintsOnlyTheHash` |
 | 18 type/mode changes | `Branching.SwitchAppliesModeOnlyChanges`, `Branching.SwitchHandlesFileReplacedByDirectory` |

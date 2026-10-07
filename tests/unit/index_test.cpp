@@ -1,5 +1,6 @@
 #include "support/ark_test.h"
 
+#include <ark/core/exceptions.h>
 #include <ark/repo/index.h>
 #include <ark/repo/index_file.h>
 #include <sstream>
@@ -127,4 +128,20 @@ TEST_F(IndexTest, IndexFileWritesSortedLinesAndParsesThemBack) {
 
   std::istringstream in(out.str());
   EXPECT_EQ(ark::IndexFile::parse(in), tree);
+}
+
+// tmp/bugs/05
+TEST_F(IndexTest, IndexFileParsesSpacedPathsOnEveryLine) {
+  const std::string text = "100644 " + std::string(64, 'a') + " my file.txt\n" +
+                           "100644 " + std::string(64, 'b') + " plain.txt\n";
+  std::istringstream in(text);
+  ark::FlatTree tree = ark::IndexFile::parse(in);
+  ASSERT_EQ(tree.size(), 2u);
+  EXPECT_EQ(tree.at(path("my file.txt")), entry('a', "100644"));
+  EXPECT_EQ(tree.at(path("plain.txt")), entry('b', "100644"));
+}
+
+TEST_F(IndexTest, IndexFileRejectsLineWithoutPath) {
+  std::istringstream in("100644 " + std::string(64, 'a') + "\n");
+  EXPECT_THROW(ark::IndexFile::parse(in), IndexCorruptedException);
 }

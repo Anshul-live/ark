@@ -15,7 +15,11 @@ int cmd_hashObject(const Repository &, const std::vector<std::string> &args){
             return 1;
         }
         std::string filename = args[0];
-        ark::Blob blob = ark::Blob::readFromFile(filename);
-        std::cout << ark::ObjectStore::hashOf(ark::ObjectType::Blob, blob.data).hex();
+        auto blob = ark::Blob::tryReadFromFile(filename);
+        if (!blob) {
+            std::cout << "Error: cannot open file " << filename << std::endl;
+            return 0;
+        }
+        std::cout << ark::ObjectStore::hashOf(ark::ObjectType::Blob, blob->data).hex();
         return 0;
 }
