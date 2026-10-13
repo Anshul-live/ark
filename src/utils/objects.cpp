@@ -1,7 +1,9 @@
 // represents a single file
+#include "exceptions.h"
 #include <_stdio.h>
 #include <ark.h>
 #include <cat-file.h>
+#include <charconv>
 #include <compress.h>
 #include <config.h>
 #include <filesystem>
@@ -15,6 +17,7 @@
 #include <repository.h>
 #include <sstream>
 #include <string>
+#include <system_error>
 
 Blob::Blob(const std::string &filename) {
   std::ifstream file(filename, std::ios::binary);
@@ -37,7 +40,7 @@ Blob *Blob::fromFile(const std::string &filename) { return new Blob(filename); }
 
 void Blob::loadFromDisk(const std::string &hash) {
   std::string content = Object::readFromDisk(hash);
-  this->content = content;
+  this->content = Object::stripHeaderFromObject(hash, content);
 }
 
 bool Blob::createFile(const std::string &path) {
@@ -114,7 +117,8 @@ bool Blob::overwriteFile(const std::string &path) {
 }
 
 void TreeNode::loadFromDisk(const std::string &node_hash) {
-  std::string content = Object::readFromDisk(node_hash);
+  std::string raw = Object::readFromDisk(node_hash);
+  std::string content = Object::stripHeaderFromObject(node_hash, raw);
   std::stringstream content_stream(content);
   std::string line;
   Config config;
@@ -140,7 +144,7 @@ void TreeNode::loadFromDisk(const std::string &node_hash) {
       this->children[name] = dynamic_cast<Object *>(treenode);
     }
   }
-  this->content = content;
+  this->content = raw;
 }
 std::unordered_map<std::string, std::pair<std::string, std::string>>
 Tree::flatten() {
@@ -376,7 +380,8 @@ std::vector<std::string> split(std::string s, char delimiter) {
 void Commit::loadFromDisk(const std::string &hash) {
   if (hash == NULL_HASH)
     return;
-  std::string content = Object::readFromDisk(hash);
+  std::string raw = Object::readFromDisk(hash);
+  std::string content = Object::stripHeaderFromObject(hash, raw);
   std::stringstream content_stream(content);
   std::string line;
   getline(content_stream, line);
@@ -392,7 +397,7 @@ void Commit::loadFromDisk(const std::string &hash) {
     line.clear();
     getline(content_stream, line);
   }
-  this->tree->root->loadFromDisk(tree_info[2]);
+  this->tree->root->loadFromDisk(tree_info[1]);
 }
 
 Commit *Commit::create(const std::string &treeHash,
@@ -459,6 +464,36 @@ std::string Object::readFromDisk(const std::string &hash) {
   std::string compressed = buffer.str();
 
   return decompressObject(compressed);
+}
+
+std::string Object::stripHeaderFromObject(const std::string &hash,
+                                          const std::string &data) {
+  size_t nul = data.find('\0');
+  if (nul == std::string::npos)
+    throw ObjectFormatException(hash, "missing header");
+
+  std::string header = data.substr(0, nul);
+  std::string body = data.substr(nul + 1);
+
+  size_t space = header.find(' ');
+  if (space == std::string::npos)
+    throw ObjectFormatException(hash, "malformed header");
+
+  std::string type = header.substr(0, space);
+  if (type != "blob" && type != "tree" && type != "commit")
+    throw ObjectFormatException(hash, "unsupported type " + type);
+
+  const char *first = header.data() + space + 1;
+  const char *last = header.data() + header.size();
+  size_t declared = 0;
+  auto [ptr, ec] = std::from_chars(first, last, declared);
+  if (ec != std::errc() || ptr != last)
+    throw ObjectFormatException(hash, "invalid size in header");
+
+  if (declared != body.size())
+    throw ObjectFormatException(hash, "size mismatch");
+
+  return body;
 }
 
 bool Object::isWrittenToDisk() {

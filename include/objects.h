@@ -28,6 +28,8 @@ public:
   std::string typeName() const;
 
   static std::string readFromDisk(const std::string &hash);
+  static std::string stripHeaderFromObject(const std::string &hash,
+                                           const std::string &data);
 };
 
 // ---------- Blob ----------
