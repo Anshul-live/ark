@@ -1,6 +1,6 @@
 #include "support/ark_test.h"
 
-#include <compress.h>
+#include <ark/storage/compression.h>
 
 #include <random>
 

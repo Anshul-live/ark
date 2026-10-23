@@ -2,26 +2,25 @@
 #include <string>
 #include <vector>
 
-#include <add.h>
-#include <ark.h>
-#include <branch.h>
-#include <cat-file.h>
-#include <commit-tree.h>
-#include <commit.h>
-#include <exceptions.h>
+#include <ark/cli/commands.h>
+#include <ark/cli/commit_message_editor.h>
+#include <ark/core/exceptions.h>
 #include <functional>
-#include <hash-object.h>
-#include <init.h>
-#include <log.h>
-#include <logger.h>
-#include <repository.h>
-#include <status.h>
-#include <switch.h>
+#include <ark/util/logger.h>
+#include <ark/repo/repository.h>
 #include <unordered_map>
-#include <update-ref.h>
-#include <write-tree.h>
 
-using CommandFn = std::function<int(const std::vector<std::string> &)>;
+using CommandFn =
+    std::function<int(const Repository &, const std::vector<std::string> &)>;
+
+static void configureLogging() {
+  try {
+    std::string path = ".ark.log";
+    Logger::instance().init(path);
+  } catch (const std::exception &e) {
+    std::cerr << "Failed to initialize logger: " << e.what() << std::endl;
+  }
+}
 
 int main(int argc, char *argv[]) {
   try {
@@ -32,19 +31,17 @@ int main(int argc, char *argv[]) {
 
     std::string cmd = argv[1];
 
+    Repository repo = Repository::discover();
+
     if (cmd != "init") {
-      try {
-        Repository repo;
-        repo.initialize();
-      } catch (const NotARepositoryException &) {
-      } catch (const std::exception &e) {
-        LOG_EXCEPTION("main", e);
-        return 0;
-      }
+      configureLogging();
     }
 
     std::unordered_map<std::string, CommandFn> commands = {
-        {"init", cmd_init},
+        {"init",
+         [](const Repository &, const std::vector<std::string> &args) {
+           return cmd_init(args);
+         }},
         {"hash-object", cmd_hashObject},
         {"cat-file", cmd_catFile},
         {"write-tree", cmd_writeTree},
@@ -65,14 +62,10 @@ int main(int argc, char *argv[]) {
       return 1;
     }
 
-    int result = it->second(args);
+    int result = it->second(repo, args);
 
     if (cmd == "init" && result == 0) {
-      try {
-        Repository repo;
-        repo.initialize();
-      } catch (...) {
-      }
+      configureLogging();
     }
 
     return result;

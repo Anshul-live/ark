@@ -1,0 +1,100 @@
+#ifndef EXCEPTIONS_HPP
+#define EXCEPTIONS_HPP
+
+#include <stdexcept>
+#include <string>
+
+class ArkException : public std::runtime_error {
+public:
+  ArkException(const std::string &message) : std::runtime_error(message) {}
+  virtual ~ArkException() = default;
+  virtual std::string code() const { return "ARK_ERROR"; }
+};
+
+class RepositoryException : public ArkException {
+public:
+  RepositoryException(const std::string &message) : ArkException(message) {}
+  std::string code() const override { return "REPO_ERROR"; }
+};
+
+class NotARepositoryException : public RepositoryException {
+public:
+  NotARepositoryException()
+      : RepositoryException("Not inside an Ark repository") {}
+  NotARepositoryException(const std::string &path)
+      : RepositoryException("Not a repository: " + path) {}
+  std::string code() const override { return "NOT_REPO"; }
+};
+
+class ObjectException : public ArkException {
+public:
+  ObjectException(const std::string &message) : ArkException(message) {}
+  std::string code() const override { return "OBJECT_ERROR"; }
+};
+
+class ObjectFormatException : public ObjectException {
+public:
+  ObjectFormatException(const std::string &hash, const std::string &reason)
+      : ObjectException("Invalid object " + hash + ": " + reason) {}
+  std::string code() const override { return "OBJECT_INVALID_FORMAT"; }
+};
+
+class ObjectNotFoundException : public ObjectException {
+public:
+  ObjectNotFoundException(const std::string &hash)
+      : ObjectException("Object not found: " + hash) {}
+  std::string code() const override { return "OBJECT_NOT_FOUND"; }
+};
+
+class InvalidObjectException : public ObjectException {
+public:
+  InvalidObjectException(const std::string &message)
+      : ObjectException("Invalid object: " + message) {}
+  std::string code() const override { return "INVALID_OBJECT"; }
+};
+
+class IndexException : public ArkException {
+public:
+  IndexException(const std::string &message) : ArkException(message) {}
+  std::string code() const override { return "INDEX_ERROR"; }
+};
+
+class IndexCorruptedException : public IndexException {
+public:
+  IndexCorruptedException() : IndexException("Index file is corrupted") {}
+  std::string code() const override { return "INDEX_CORRUPTED"; }
+};
+
+class BranchException : public ArkException {
+public:
+  BranchException(const std::string &message) : ArkException(message) {}
+  std::string code() const override { return "BRANCH_ERROR"; }
+};
+
+class BranchNotFoundException : public BranchException {
+public:
+  BranchNotFoundException(const std::string &name)
+      : BranchException("Branch not found: " + name) {}
+  std::string code() const override { return "BRANCH_NOT_FOUND"; }
+};
+
+class BranchExistsException : public BranchException {
+public:
+  BranchExistsException(const std::string &name)
+      : BranchException("Branch already exists: " + name) {}
+  std::string code() const override { return "BRANCH_EXISTS"; }
+};
+
+class ConfigException : public ArkException {
+public:
+  ConfigException(const std::string &message) : ArkException(message) {}
+  std::string code() const override { return "CONFIG_ERROR"; }
+};
+
+class FileSystemException : public ArkException {
+public:
+  FileSystemException(const std::string &message) : ArkException(message) {}
+  std::string code() const override { return "FS_ERROR"; }
+};
+
+#endif

@@ -350,21 +350,7 @@ cd build
 ./test_ark
 ```
 
-40 tests covering:
-- Logger
-- Config
-- Repository
-- Ref (branches)
-- Index
-- Objects
-
-### End-to-End Tests
-
-```bash
-./tests/test_e2e.sh
-```
-
-25 workflow tests covering all commands.
+The suite has 184 tests: in-process unit tests, CLI tests that run the real `ark` binary, and randomized branch-history tests. See `tests/README.md`.
 
 ---
 

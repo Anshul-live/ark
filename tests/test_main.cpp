@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <logger.h>
+#include <ark/util/logger.h>
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);

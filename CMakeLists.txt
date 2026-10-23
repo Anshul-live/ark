@@ -27,27 +27,51 @@ find_package(ZLIB REQUIRED)
 
 # Everything except main() lives in a library so the CLI and the tests share one build.
 add_library(ark_core STATIC
-    src/commands/init.cpp
-    src/commands/hash-object.cpp
-    src/commands/cat-file.cpp
-    src/commands/write-tree.cpp
-    src/commands/commit-tree.cpp
-    src/commands/add.cpp
-    src/commands/commit.cpp
-    src/commands/branch.cpp
-    src/commands/switch.cpp
-    src/commands/log.cpp
-    src/commands/status.cpp
-    src/commands/update-ref.cpp
+    src/cli/commands/init.cpp
+    src/cli/commands/hash_object.cpp
+    src/cli/commands/cat_file.cpp
+    src/cli/commands/write_tree.cpp
+    src/cli/commands/commit_tree.cpp
+    src/cli/commands/add.cpp
+    src/cli/commands/commit.cpp
+    src/cli/commands/branch.cpp
+    src/cli/commands/switch.cpp
+    src/cli/commands/log.cpp
+    src/cli/commands/status.cpp
+    src/cli/commands/update_ref.cpp
+    src/cli/commit_message_editor.cpp
 
-    src/utils/compress.cpp
-    src/utils/objects.cpp
-    src/utils/ark.cpp
-    src/utils/index.cpp
-    src/utils/config.cpp
-    src/utils/repository.cpp
-    src/utils/ref.cpp
-    src/utils/logger.cpp
+    src/core/object_hash.cpp
+    src/core/object_type.cpp
+    src/core/file_mode.cpp
+    src/core/repo_path.cpp
+    src/core/ref_name.cpp
+
+    src/storage/compression.cpp
+    src/storage/sha256.cpp
+    src/storage/object_format.cpp
+    src/storage/object_store.cpp
+    src/objects/commit.cpp
+    src/objects/commit_store.cpp
+    src/objects/commit_dag.cpp
+    src/objects/blob.cpp
+    src/objects/tree.cpp
+    src/objects/flat_tree.cpp
+    src/objects/tree_builder.cpp
+    src/objects/tree_diff.cpp
+    src/repo/index.cpp
+    src/repo/index_file.cpp
+    src/repo/config.cpp
+    src/repo/repository.cpp
+    src/repo/ref_store.cpp
+    src/repo/checkout.cpp
+    src/repo/ignore_rules.cpp
+    src/repo/working_tree.cpp
+    src/repo/status.cpp
+    src/util/logger.cpp
+    src/util/strings.cpp
+    src/util/fs.cpp
+    src/util/time.cpp
 )
 target_include_directories(ark_core PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(ark_core PUBLIC OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB)
@@ -66,11 +90,16 @@ add_executable(test_ark
 
     tests/unit/compress_test.cpp
     tests/unit/objects_test.cpp
+    tests/unit/commit_test.cpp
+    tests/unit/tree_test.cpp
+    tests/unit/diff_test.cpp
     tests/unit/index_test.cpp
     tests/unit/config_test.cpp
     tests/unit/ref_test.cpp
     tests/unit/repository_test.cpp
     tests/unit/logger_test.cpp
+    tests/unit/core_types_test.cpp
+    tests/unit/object_store_test.cpp
 
     tests/cli/init_test.cpp
     tests/cli/plumbing_test.cpp

@@ -1,10 +1,46 @@
 #include "support/ark_test.h"
 
-#include <index.h>
-#include <init.h>
-#include <objects.h>
+#include <ark/repo/index.h>
+#include <ark/cli/commands.h>
+#include <ark/objects/blob.h>
+#include <ark/objects/commit.h>
+#include <ark/objects/commit_store.h>
+#include <ark/repo/config.h>
+#include <ark/objects/tree_builder.h>
+#include <ark/repo/repository.h>
+#include <ark/storage/object_store.h>
 
 using namespace arktest;
+
+namespace {
+std::string hashFile(const std::string &path) {
+  return ark::ObjectStore::hashOf(ark::ObjectType::Blob,
+                                  ark::Blob::readFromFile(path).data)
+      .hex();
+}
+
+std::string storeFile(const std::string &path) {
+  Repository repo;
+  ark::ObjectStore store(repo.objectsDir());
+  return store
+      .write(ark::ObjectType::Blob, ark::Blob::readFromFile(path).data)
+      .hex();
+}
+
+std::string writeTree() {
+  Repository repo;
+  ark::ObjectStore store(repo.objectsDir());
+  Index idx(repo);
+  idx.load();
+  return ark::writeTreeFromIndex(idx, store).hex();
+}
+
+void stageBlob(Index &idx, const std::string &path, const std::string &hash) {
+  idx.stage(ark::RepoPath::fromRelative(path),
+            ark::FileEntry{ark::ObjectHash::parse(hash).value(),
+                           ark::FileMode::Regular});
+}
+} // namespace
 
 namespace {
 
@@ -21,6 +57,7 @@ protected:
   fs::path repo() const { return tmp_.path(); }
 
   TempDir tmp_;
+  Repository repo_;
   std::unique_ptr<CwdGuard> cwd_;
 };
 
@@ -28,51 +65,47 @@ protected:
 
 TEST_F(ObjectsTest, BlobHashIsSha256OfHeaderAndContent) {
   writeFile("f.txt", "hello\n");
-  Blob blob("f.txt");
-  EXPECT_EQ(blob.hash, blobHash("hello\n"));
+  EXPECT_EQ(hashFile("f.txt"), blobHash("hello\n"));
 }
 
 TEST_F(ObjectsTest, BlobHashCoversBinaryContent) {
   const std::string bytes("\0\x01\xff\n\0tail", 9);
   writeFile("bin", bytes);
-  EXPECT_EQ(Blob("bin").hash, blobHash(bytes));
+  EXPECT_EQ(hashFile("bin"), blobHash(bytes));
 }
 
 TEST_F(ObjectsTest, EmptyFileHasWellDefinedHash) {
   writeFile("empty", "");
-  EXPECT_EQ(Blob("empty").hash, blobHash(""));
+  EXPECT_EQ(hashFile("empty"), blobHash(""));
 }
 
 TEST_F(ObjectsTest, WrittenBlobIsStoredUnderFanoutPathAndVerifies) {
   const std::string content = "stored content\n";
   writeFile("f.txt", content);
-  Blob blob("f.txt");
-  blob.writeObjectToDisk();
+  const std::string hash = storeFile("f.txt");
 
-  EXPECT_TRUE(fs::is_regular_file(repo() / ".ark/objects" / blob.hash.substr(0, 2) /
-                                  blob.hash.substr(2)));
-  auto obj = readObject(repo(), blob.hash); // also checks sha256(object) == id
+  EXPECT_TRUE(fs::is_regular_file(repo() / ".ark/objects" / hash.substr(0, 2) /
+                                  hash.substr(2)));
+  auto obj = readObject(repo(), hash); // also checks sha256(object) == id
   ASSERT_TRUE(obj);
   EXPECT_EQ(obj->type, "blob");
   EXPECT_EQ(obj->body, content);
-  EXPECT_TRUE(blob.isWrittenToDisk());
+  Repository r;
+  EXPECT_TRUE(ark::ObjectStore(r.objectsDir())
+                  .contains(ark::ObjectHash::unchecked(hash)));
 }
 
 TEST_F(ObjectsTest, TreeWriteMatchesIndexContents) {
   const std::map<std::string, std::string> files = {
       {"a.txt", "A"}, {"d/b.txt", "B"}, {"d/e/c.txt", "C"}, {"z.txt", "Z"}};
-  Index idx;
+  Index idx(repo_);
   for (const auto &[path, content] : files) {
     writeFile(path, content);
-    Blob blob(path);
-    blob.writeObjectToDisk();
-    idx.stage(path, blob.hash, "100644");
+    stageBlob(idx, path, storeFile(path));
   }
   idx.save();
 
-  Tree *tree = Tree::write();
-  ASSERT_NE(tree, nullptr);
-  FileMap stored = flattenTree(repo(), tree->root->hash);
+  FileMap stored = flattenTree(repo(), writeTree());
 
   FileMap expected;
   for (const auto &[path, content] : files) {
@@ -85,22 +118,22 @@ TEST_F(ObjectsTest, TreeWriteMatchesIndexContents) {
 TEST_F(ObjectsTest, LoadedTreeFlattensToFullPathsOfEveryBlob) {
   const std::map<std::string, std::string> files = {
       {"a.txt", "A"}, {"b.txt", "B"}, {"d/a.txt", "dA"}, {"d/e/c.txt", "C"}};
-  Index idx;
+  Index idx(repo_);
   for (const auto &[path, content] : files) {
     writeFile(path, content);
-    Blob blob(path);
-    blob.writeObjectToDisk();
-    idx.stage(path, blob.hash, "100644");
+    stageBlob(idx, path, storeFile(path));
   }
   idx.save();
-  const std::string treeHash = Tree::write()->root->hash;
+  const std::string treeHash = writeTree();
 
-  Tree loaded;
-  loaded.loadTreeFromDisk(treeHash);
-  auto flat = loaded.flatten();
+  Repository r;
+  ark::ObjectStore store(r.objectsDir());
+  auto flat = ark::flattenTree(store, ark::ObjectHash::unchecked(treeHash));
 
-  std::map<std::string, std::pair<std::string, std::string>> actual(flat.begin(),
-                                                                    flat.end());
+  FileMap actual;
+  for (const auto &[path, entry] : flat)
+    actual[path.str()] = {entry.hash.hex(),
+                          std::string(ark::toOctalString(entry.mode))};
   FileMap expected;
   for (const auto &[path, content] : files) {
     expected[path] = {blobHash(content), "100644"};
@@ -116,14 +149,12 @@ TEST_F(ObjectsTest, TreeHashDoesNotDependOnStagingOrder) {
     writeFile(names.back(), std::string(1, c));
   }
   auto treeFor = [&](const std::vector<std::string> &order) {
-    Index idx;
+    Index idx(repo_);
     for (const auto &n : order) {
-      Blob blob(n);
-      blob.writeObjectToDisk();
-      idx.stage(n, blob.hash, "100644");
+      stageBlob(idx, n, storeFile(n));
     }
     idx.save();
-    return Tree::write()->root->hash;
+    return writeTree();
   };
   std::vector<std::string> reversed(names.rbegin(), names.rend());
   EXPECT_EQ(treeFor(names), treeFor(reversed));
@@ -132,21 +163,31 @@ TEST_F(ObjectsTest, TreeHashDoesNotDependOnStagingOrder) {
 // tmp/bugs/25
 TEST_F(ObjectsTest, CommitCreateRecordsTreeParentsAndMessage) {
   writeFile("f", "x");
-  Blob blob("f");
-  blob.writeObjectToDisk();
-  Index idx;
-  idx.stage("f", blob.hash, "100644");
+  Index idx(repo_);
+  stageBlob(idx, "f", storeFile("f"));
   idx.save();
-  const std::string tree = Tree::write()->root->hash;
+  const std::string tree = writeTree();
 
-  Commit *root = Commit::create(tree, "", "", "first");
-  CommitInfo info = parseCommit(readObject(repo(), root->hash)->body);
+  Repository r;
+  ark::ObjectStore store(r.objectsDir());
+  ark::CommitStore commits(store);
+  const ark::Identity who{"Unit", "unit@test"};
+
+  ark::Commit rootCommit;
+  rootCommit.tree = ark::ObjectHash::unchecked(tree);
+  rootCommit.committer = ark::Signature::now(who);
+  rootCommit.message = "first";
+  const std::string rootHash = commits.write(rootCommit).hex();
+  CommitInfo info = parseCommit(readObject(repo(), rootHash)->body);
   EXPECT_EQ(info.tree, tree);
   EXPECT_TRUE(info.parents.empty());
   EXPECT_EQ(info.message, "first");
   EXPECT_NE(info.committer.find("Unit <unit@test>"), std::string::npos);
 
-  Commit *child = Commit::create(tree, root->hash, "", "second");
-  EXPECT_EQ(parseCommit(readObject(repo(), child->hash)->body).parents,
-            std::vector<std::string>{root->hash});
+  ark::Commit child = rootCommit;
+  child.parents = {ark::ObjectHash::unchecked(rootHash)};
+  child.message = "second";
+  const std::string childHash = commits.write(child).hex();
+  EXPECT_EQ(parseCommit(readObject(repo(), childHash)->body).parents,
+            std::vector<std::string>{rootHash});
 }

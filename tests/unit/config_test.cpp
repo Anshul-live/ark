@@ -1,7 +1,7 @@
 #include "support/ark_test.h"
 
-#include <config.h>
-#include <init.h>
+#include <ark/repo/config.h>
+#include <ark/cli/commands.h>
 
 #include <cstdlib>
 
@@ -32,7 +32,7 @@ protected:
 
   Config loadRepoConfig(const std::string &text) {
     writeFile(".ark/config", text);
-    Config c;
+    Config c(repo_);
     c.load();
     return c;
   }
@@ -40,6 +40,7 @@ protected:
   fs::path home() const { return tmp_.path() / "home"; }
 
   TempDir tmp_;
+  Repository repo_;
   std::unique_ptr<CwdGuard> cwd_;
   std::optional<std::string> savedHome_;
 };
@@ -72,12 +73,12 @@ TEST_F(ConfigTest, MissingFieldsMeanNoIdentity) {
 }
 
 TEST_F(ConfigTest, SaveThenLoadRoundTrips) {
-  Config c;
+  Config c(repo_);
   c.setUserName("Round Trip");
   c.setUserEmail("rt@example.com");
   c.save();
 
-  Config loaded;
+  Config loaded(repo_);
   loaded.load();
   EXPECT_EQ(loaded.getUserName(), "Round Trip");
   EXPECT_EQ(loaded.getUserEmail(), "rt@example.com");

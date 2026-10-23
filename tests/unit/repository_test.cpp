@@ -1,14 +1,19 @@
 #include "support/ark_test.h"
 
-#include <exceptions.h>
-#include <init.h>
-#include <repository.h>
+#include <ark/core/exceptions.h>
+#include <ark/cli/commands.h>
+#include <ark/core/file_mode.h>
+#include <ark/repo/ignore_rules.h>
+#include <ark/repo/repository.h>
+#include <ark/repo/working_tree.h>
+#include <ark/util/fs.h>
+#include <ark/util/time.h>
 
 #include <regex>
 
 using namespace arktest;
 
-// Note: Repository::isIgnored caches patterns in a function-local static, so
+// Note: IgnoreRules is loaded per command, so
 // ignore rules are tested through the CLI (one process per command) instead.
 
 namespace {
@@ -55,27 +60,25 @@ TEST(RepositoryOutside, ThrowsNotARepository) {
 }
 
 TEST_F(RepositoryTest, ModeReflectsFileType) {
-  Repository repo;
   writeFile("plain", "x");
   writeFile("script", "#!/bin/sh\n");
   setExecutable("script", true);
   fs::create_directory("dir");
   fs::create_symlink("plain", "link");
 
-  EXPECT_EQ(repo.getMode("plain"), "100644");
-  EXPECT_EQ(repo.getMode("script"), "100755");
-  EXPECT_EQ(repo.getMode("dir"), "040000");
-  EXPECT_EQ(repo.getMode("link"), "120000");
+  EXPECT_EQ(ark::toOctalString(*ark::detectFileMode("plain")), "100644");
+  EXPECT_EQ(ark::toOctalString(*ark::detectFileMode("script")), "100755");
+  EXPECT_EQ(ark::toOctalString(*ark::detectFileMode("dir")), "040000");
+  EXPECT_EQ(ark::toOctalString(*ark::detectFileMode("link")), "120000");
 }
 
 TEST_F(RepositoryTest, NormalizePath) {
-  Repository repo;
-  EXPECT_EQ(repo.normalizePath("a/./b/../c"), "a/c");
-  EXPECT_EQ(repo.normalizePath("a//b"), "a/b");
+  EXPECT_EQ(ark::normalizeGenericPath("a/./b/../c"), "a/c");
+  EXPECT_EQ(ark::normalizeGenericPath("a//b"), "a/b");
 }
 
 TEST_F(RepositoryTest, TimezoneOffsetFormat) {
-  EXPECT_TRUE(std::regex_match(Repository().getTimezoneOffset(),
+  EXPECT_TRUE(std::regex_match(ark::formatLocalUtcOffset(),
                                std::regex("^[+-][0-9]{4}$")));
 }
 
@@ -84,10 +87,11 @@ TEST_F(RepositoryTest, WorkingDirectoryScanNeverIncludesArkMetadata) {
   writeFile("tracked.txt", "x");
   writeFile("sub/nested.txt", "y");
   Repository repo;
-  auto files = repo.loadWorkingDirectoryWithoutIgnored();
-  for (const auto &[path, blob] : files) {
-    EXPECT_NE(path.rfind(".ark/", 0), 0u) << path;
+  ark::IgnoreRules ignore = ark::IgnoreRules::load(repo);
+  auto files = ark::WorkingTree(repo, ignore).scan();
+  for (const auto &[path, entry] : files) {
+    EXPECT_NE(path.str().rfind(".ark/", 0), 0u) << path;
   }
-  EXPECT_TRUE(files.count("tracked.txt"));
-  EXPECT_TRUE(files.count("sub/nested.txt"));
+  EXPECT_TRUE(files.count(ark::RepoPath::fromRelative("tracked.txt")));
+  EXPECT_TRUE(files.count(ark::RepoPath::fromRelative("sub/nested.txt")));
 }
