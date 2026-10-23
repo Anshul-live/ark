@@ -1,309 +1,204 @@
-# Ark Usage Guide
+# Ark usage
 
-This guide covers how to use Ark for version control.
+This guide covers building Ark, the commands it has, the config and ignore files, and the error messages you can run into. Everything here was checked against `src/main.cpp` and `src/cli/commands/*.cpp`. Where a command misbehaves, the text says so; the full list is in the [README](README.md#known-issues).
 
 ## Building
 
-### Requirements
+Requirements: a C++17 compiler, CMake 3.16 or newer, OpenSSL, zlib. CMake downloads GoogleTest at configure time, so the first configure needs network access.
 
-- C++17 compiler (clang, gcc, or MSVC)
-- CMake >= 3.16
-- OpenSSL (for SHA-256)
-- zlib (for compression)
-
-### macOS (Homebrew)
+macOS (Homebrew):
 
 ```bash
 brew install cmake openssl@3 zlib
-
-cmake -S . -B build \
-      -DCMAKE_PREFIX_PATH="$(brew --prefix openssl@3);$(brew --prefix zlib)"
+cmake -S . -B build -DCMAKE_PREFIX_PATH="$(brew --prefix openssl@3)"
 cmake --build build -j4
 ```
 
-### Ubuntu/Debian
+Ubuntu/Debian:
 
 ```bash
-sudo apt update
 sudo apt install cmake libssl-dev zlib1g-dev
-
 cmake -S . -B build
 cmake --build build -j4
 ```
 
-### Windows
+The binary is `build/ark`. Windows has not been tried.
 
-```powershell
-# Using vcpkg
-vcpkg install openssl zlib
+## Quick start
 
-cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake
-cmake --build build --config Release
-```
-
----
-
-## Quick Start
-
-### 1. Initialize Repository
+The examples assume `ark` is on your `PATH` (for example `export PATH="$PWD/build:$PATH"`).
 
 ```bash
-./build/ark init
+mkdir demo && cd demo
+ark init
+printf '[user]\nname = Ada\nemail = ada@example.com\n' > .ark/config
+
+echo "hello" > hello.txt
+ark add hello.txt
+ark commit
+ark log
 ```
 
-Creates `.ark/` directory with:
-```
-.ark/
-├── objects/
-├── refs/heads/
-├── HEAD
-├── index
-├── config
-└── ark.log
-```
+`ark init` prints `ark initialised` (or `ark already initialised` if `.ark/` exists). The user name and email in `.ark/config` are required for `commit`.
 
-### 2. Configure User (Required for Commits)
+`ark commit` opens an editor on a temporary file. It uses `$GIT_EDITOR`, then `$VISUAL`, then `$EDITOR`, then `vi`. To commit without an interactive editor, point `GIT_EDITOR` at a script that writes the message into the file it receives:
 
 ```bash
-# Create config file
-echo -e "[user]\nname = Your Name\nemail = you@example.com" > .ark/config
+cat > /tmp/ark-msg.sh <<'SH'
+#!/bin/sh
+echo "my message" > "$1"
+SH
+chmod +x /tmp/ark-msg.sh
+GIT_EDITOR=/tmp/ark-msg.sh ark commit
 ```
 
-Or manually:
+A value such as `GIT_EDITOR="echo hi"` does not work: the file name is appended to the command, and `echo` does not write to it, so the message stays empty and the commit is aborted.
+
+## Commands
+
+All commands except `init` must run inside a repository (any subdirectory of a directory containing `.ark/`). With no command, Ark prints `Usage: <program> <command> [args...]` and exits 1. An unknown command prints `Unknown command: <name>` and exits 1.
+
+### init
+
 ```bash
-cat > .ark/config <<EOF
-[user]
-name = Your Name
-email = you@example.com
-EOF
+ark init
 ```
 
-### 3. Add Files
+Creates `.ark/` in the current directory with `objects/`, `refs/heads/`, `HEAD` (pointing at `refs/heads/main`), an empty `index` and an empty `config`. The branch `main` exists but points at a zero hash until the first commit.
+
+### add
 
 ```bash
-# Add single file
-./build/ark add filename.txt
-
-# Add multiple files
-./build/ark add file1.txt file2.txt
-
-# Add directory (recursively)
-./build/ark add src/
-
-# Add all files in current directory
-./build/ark add .
+ark add <path> [<path> ...]
 ```
 
-### 4. Create Commit
+Stages files. A directory is walked recursively. Each file's content is stored as a blob and its path, hash and mode are written to `.ark/index`. Files matching `.arkignore` are skipped. With no arguments it prints `Usage:  add <filename>/<dirname> ...` and exits 1.
+
+A path that does not exist prints `<absolute path> does not exist.` to stderr, but the command still exits 0.
+
+Avoid `ark add .`: it also stages `.ark/` and `.ark.log`. Name your files or directories instead.
+
+### status
 
 ```bash
-# Opens editor for commit message
-./build/ark commit
-
-# Or use environment variable
-export GIT_EDITOR="echo 'My commit message'"
-./build/ark commit
+ark status
 ```
 
-### 5. View History
+Prints three headings, each followed by paths (staged in green, modified and untracked in red):
 
-```bash
-./build/ark log
+```
+Changes to be committed:
+a.txt
+
+Changes not staged for commit:
+b.txt (modified)
+
+Untracked files:
+c.txt (untracked)
 ```
 
----
+Deleted files are not reported, and `.ark/` and `.ark.log` currently show up as untracked.
 
-## Commands Reference
-
-### Repository Commands
-
-#### init
-Initialize a new repository.
+### commit
 
 ```bash
-./ark init
+ark commit
 ```
 
-#### status
-Show working tree status.
+Writes a tree from the index, then a commit whose parent is the current HEAD commit, and moves the current branch to it. It prints `passed checks` and some log lines. It does not print the new hash; use `ark log`.
+
+There is no `-m` option. Arguments are ignored. If the message is empty, it prints `commit aborted due to empty message` and exits 1. If `user.name` or `user.email` is missing, it prints `please provide the following values user.name and user.email before committing.` and exits with status 0. A commit is made even if nothing is staged or changed.
+
+### log
 
 ```bash
-./ark status
+ark log
 ```
 
-Output shows:
-- Changes staged for commit (green)
-- Changes not staged (red, modified)
-- Untracked files (red)
+Prints one line per commit, newest first, following parents breadth first:
 
----
-
-### Staging Commands
-
-#### add
-Stage files for commit.
-
-```bash
-./ark add <file> [files...]
-./ark add .          # Stage all files
-./ark add <dir>/    # Stage directory contents
+```
+commit: 8993d780493d733f026e57f720e7a4d6ffab79037f2a21cbdcb596979e13a1c1
+commit: f57415b3d2e5abc8a0083d15946f4acad9f354e377cffdee7c5872f820b7c1a5
 ```
 
-Files matching `.arkignore` are not staged.
+Only the hash is shown, not the author, date or message. On a detached HEAD it prints `HEAD is detached` and exits 1.
 
----
-
-### Commit Commands
-
-#### commit
-Create a new commit from staged changes.
+### branch
 
 ```bash
-./ark commit
+ark branch              # list branches
+ark branch <name>       # create a branch at the current commit
 ```
 
-Requires:
-- Staged files (`ark add`)
-- User configuration (name and email)
-- Non-empty commit message
+The list marks the current branch with `* ` (name in green) and indents the others by two spaces. Order is the order the filesystem returns, not sorted. There is no delete option.
 
-#### commit-tree
-Low-level commit creation (advanced).
+Creating a branch before the first commit prints `please make a commit first` to stderr and exits 1. An existing name prints `branch already exists` and exits 1.
+
+### switch
 
 ```bash
-./ark commit-tree <tree-hash> [-p <parent>] [-m <message>]
+ark switch <branch>
 ```
 
----
+Moves HEAD to the branch, rewrites the working tree to match the branch's commit, and replaces the index with that commit's files. For each changed file it prints `creating file ...`, `overwriting file ...` or `deleting file ...`, then `switched branch to <branch>`. There is no `-c` option: create the branch first with `ark branch`.
 
-### Branching Commands
+| Situation | Output | Exit |
+|---|---|---|
+| No argument | `Usage: ark switch <branch-name>` (stdout) | 1 |
+| Branch missing | `branch <name> does not exist` (stderr) | 1 |
+| Already on it | `already on branch <name>` (stderr) | 0 |
 
-#### branch
+`switch` does not check for uncommitted work and can overwrite it (see the README, Known issues). Commit your changes before switching.
 
-```bash
-# List branches
-./ark branch
+### Plumbing commands
 
-# Create branch (points to current commit)
-./ark branch <branch-name>
+Low-level commands that work on single objects.
 
-# Delete branch
-./ark branch -d <branch-name>
-```
+| Command | What it does | Failure |
+|---|---|---|
+| `ark hash-object <file>` | Prints the blob hash of a file. Stores nothing. | No argument: `Usage: hash-object <filename>`, exit 1. Unreadable file: `Error: cannot open file <file>`, exit 0 |
+| `ark cat-file <hash>` | Prints an object's body (without the header) followed by a newline. | `Usage: cat-file <object-hash>`; `Error: invalid object hash` for hashes shorter than 3 characters; `Error: object not found for hash <hash>`; all exit 1 |
+| `ark write-tree` | Writes tree objects from the index and prints the root tree hash. | |
+| `ark commit-tree <tree> [<parent1> [<parent2>]]` | Writes a commit for a tree and prints its hash. | Broken: it reads parents and message from the wrong argument positions. Avoid it. |
+| `ark update-ref <ref-path> <hash>` | Writes the hash into `.ark/<ref-path>`, for example `refs/heads/main`. | No validation of the path or the hash. Missing arguments: `Usage: update-ref <ref-path> <commit-hash>`, exit 1 |
 
-#### switch
+Because of the stdout log lines, `write-tree` and `hash-object` output can have `[INFO]` lines mixed in.
 
-```bash
-# Switch to branch
-./ark switch <branch-name>
+## Not available
 
-# Create and switch
-./ark switch -c <branch-name>
-```
+`merge` is not available yet. The source file `src/cli/commands/merge.cpp` is not compiled or registered, so `ark merge` prints `Unknown command: merge`. Ark also has no diff, reset, tag, stash, remote or clone commands.
 
-When switching:
-- Working directory updated to match branch
-- Index updated with branch's files
-- HEAD points to new branch
-
----
-
-### Object Commands
-
-#### hash-object
-Compute object ID without storing.
+## Working with branches
 
 ```bash
-./ark hash-object <filename>
-```
+ark branch feature
+ark switch feature
 
-Returns 64-character SHA-256 hash.
-
-#### cat-file
-Display object content.
-
-```bash
-./ark cat-file <object-hash>
-```
-
-#### write-tree
-Create tree object from index.
-
-```bash
-./ark write-tree
-```
-
-Returns tree hash.
-
----
-
-### Reference Commands
-
-#### update-ref
-Update branch reference.
-
-```bash
-./ark update-ref refs/heads/<branch-name> <commit-hash>
-```
-
----
-
-## Working with Branches
-
-### Creating a Feature Branch
-
-```bash
-# Start from main
-./ark branch feature
-
-# Or create and switch
-./ark switch -c feature
-
-# Make changes
 echo "feature work" > feature.txt
-./ark add feature.txt
-./ark commit
+ark add feature.txt
+ark commit
 
-# Switch back to main
-./ark switch main
+ark switch main        # feature.txt is deleted from the working tree
 ```
 
-### Merging (Coming Soon)
+`ark switch main` prints `deleting file <path>` for `feature.txt` because it is not in `main`'s commit.
 
-Not yet implemented.
+## Ignoring files
 
----
+Put an `.arkignore` file in the repository root, or in any subdirectory (its patterns are relative to its own directory). One pattern per line. Empty lines and lines starting with `#` are skipped.
 
-## Ignoring Files
-
-Create `.arkignore` in repository root:
-
-```bash
-# Ignore specific files
+```
 secret.txt
-
-# Ignore patterns (exact match)
-*.log
-*.tmp
-
-# Ignore directories
 build/
-node_modules/
+docs/notes.txt
 ```
 
-Note: Currently supports exact path matching, not glob/regex.
-
----
+Matching is by exact path, not glob: `*.log` matches a file literally named `*.log`. A pattern ending in `/` ignores that directory and everything under it. Ignored files are skipped by `add` and by `status`.
 
 ## Configuration
 
-### Config File Location
-
-- Repository: `.ark/config`
-- User home: `~/.arkconfig`
-- System: `~/config/ark/config`
-
-### Config Format
+Only `.ark/config` is used. Format:
 
 ```ini
 [user]
@@ -311,117 +206,56 @@ name = Your Name
 email = you@example.com
 ```
 
-### Reading Config
+Lines beginning with `;` are comments. `Config::load` also tries `~/.arkconfig` and `~/config/ark/config`, but it opens those names literally without expanding `~`, so they are never found (known issue). Set the identity in each repository's `.ark/config`.
 
-Config is automatically loaded when needed. Check with:
+## Log file
 
-```bash
-cat .ark/config
-```
+Ark writes a log to `.ark.log` in the directory where you ran the command, not inside `.ark/`. Levels are DEBUG, INFO, WARNING, ERROR and FATAL. INFO and above are also printed to stdout, prefixed with a timestamp, for example `[2026-10-24 00:57:44.245] [INFO] Index loaded: 2 entries`. Both behaviours are known issues.
 
----
+## Error messages
 
-## Troubleshooting
+| Message | Meaning |
+|---|---|
+| `Not inside an Ark repository` | No `.ark/` in the current directory or any parent. Run `ark init`, or `cd` into the repository. |
+| `Unknown command: <name>` | Not one of the commands listed above. |
+| `please make a commit first` | `ark branch <name>` before the first commit. |
+| `branch already exists` | `ark branch <name>` with a name in use. |
+| `branch <name> does not exist` | `ark switch` to a missing branch. |
+| `commit aborted due to empty message` | The editor left the file empty. Check that `GIT_EDITOR` writes to its first argument. |
+| `please provide the following values user.name and user.email before committing.` | Add a `[user]` section to `.ark/config`. |
+| `Error: object not found for hash <hash>` | `cat-file` hash is wrong or the object is missing. |
+| `Index file is corrupted` | `.ark/index` has a line that is not `<mode> <hash> <path>`. |
+| `Editor exited with code <n>` | The editor command returned a non-zero status. |
 
-### "Not inside an Ark repository"
-
-Run `ark init` first, or navigate to repository root.
-
-### "No commits found"
-
-Make at least one commit before creating branches.
-
-### "Branch already exists"
-
-Choose a different branch name or delete existing.
-
-### "Permission denied"
-
-Check file permissions on `.ark/` directory.
-
----
-
-## Testing
-
-### Unit Tests
+## Tests
 
 ```bash
 cd build
-./test_ark
+ctest --output-on-failure
 ```
 
-The suite has 184 tests: in-process unit tests, CLI tests that run the real `ark` binary, and randomized branch-history tests. See `tests/README.md`.
+The suite has 187 tests; 146 pass and 41 fail at the time of writing because of the open issues. See [tests/README.md](tests/README.md).
 
----
-
-## Log File
-
-Ark logs to `.ark/ark.log`:
+## Example session
 
 ```bash
-tail -f .ark/ark.log
-```
+mkdir demo && cd demo
+ark init
+printf '[user]\nname = Dev\nemail = dev@example.com\n' > .ark/config
 
-Log levels:
-- DEBUG
-- INFO
-- WARNING
-- ERROR
-- FATAL
-
----
-
-## Examples
-
-### Complete Workflow
-
-```bash
-# Initialize
-./ark init
-
-# Configure
-echo "[user]
-name = Dev
-email = dev@example.com" > .ark/config
-
-# Create project
-echo "# My Project" > README.md
+echo "# My project" > README.md
 mkdir src
-echo "void main() {}" > src/main.cpp
+echo "int main() { return 0; }" > src/main.cpp
 
-# Stage and commit
-./ark add .
-./ark commit  # Enter message: "Initial commit"
+ark add README.md src
+GIT_EDITOR=/tmp/ark-msg.sh ark commit      # script from Quick start
 
-# Make changes
-echo "int x = 1;" >> src/main.cpp
-./ark add src/main.cpp
-./ark commit  # Enter message: "Add variable"
+echo "// more" >> src/main.cpp
+ark add src/main.cpp
+GIT_EDITOR=/tmp/ark-msg.sh ark commit
 
-# View history
-./ark log
-
-# Create feature branch
-./ark branch develop
-./ark switch develop
-
-# Work on feature
-echo "feature" > feature.txt
-./ark add feature.txt
-./ark commit  # Enter message: "Add feature"
-
-# Switch back
-./ark switch main
-```
-
-### Single File Workflow
-
-```bash
-echo "hello" > file.txt
-./ark add file.txt
-./ark commit  # "Add file"
-echo "world" >> file.txt
-./ark add file.txt
-./ark commit  # "Update file"
-./ark log
+ark log
+ark branch develop
+ark switch develop
+ark switch main
 ```
