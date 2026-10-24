@@ -1,8 +1,10 @@
+#include <ark/util/profiler.h>
 #include <ark/objects/tree_diff.h>
 
 namespace ark {
 
 std::vector<FileChange> diffTrees(const FlatTree &from, const FlatTree &to) {
+  ARK_PROF_SCOPE("tree.diff");
   std::vector<FileChange> changes;
   auto a = from.begin();
   auto b = to.begin();

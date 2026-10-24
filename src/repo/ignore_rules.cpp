@@ -4,6 +4,7 @@
 #include <ark/repo/repository.h>
 #include <ark/util/fs.h>
 #include <ark/util/logger.h>
+#include <ark/util/profiler.h>
 #include <ark/util/strings.h>
 
 #include <fstream>
@@ -12,6 +13,7 @@
 namespace ark {
 
 IgnoreRules IgnoreRules::load(const Repository &repo) {
+  ARK_PROF_SCOPE("ignore.load");
   IgnoreRules rules;
   std::vector<std::string> paths;
 
@@ -40,6 +42,7 @@ IgnoreRules IgnoreRules::load(const Repository &repo) {
     }
 
     try {
+      ARK_PROF_COUNT("ignore.dirs_listed", 1);
       for (const auto &entry : std::filesystem::directory_iterator(path)) {
         if (std::filesystem::is_directory(entry)) {
           paths.push_back(entry.path().string());

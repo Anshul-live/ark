@@ -2,6 +2,7 @@
 #include <ark/repo/index_file.h>
 
 #include <ark/core/file_mode.h>
+#include <ark/util/profiler.h>
 
 #include <string>
 #include <string_view>
@@ -9,6 +10,7 @@
 namespace ark {
 
 FlatTree IndexFile::parse(std::istream &in) {
+  ARK_PROF_SCOPE("index.parse");
   FlatTree entries;
   std::string line;
   while (std::getline(in, line)) {
@@ -33,6 +35,7 @@ FlatTree IndexFile::parse(std::istream &in) {
 }
 
 void IndexFile::write(std::ostream &out, const FlatTree &entries) {
+  ARK_PROF_SCOPE("index.format");
   for (const auto &[path, entry] : entries) {
     out << toOctalString(entry.mode) << " " << entry.hash << " " << path
         << "\n";

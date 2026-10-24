@@ -3,10 +3,12 @@
 #include <ark/core/file_mode.h>
 #include <ark/objects/blob.h>
 #include <ark/storage/object_store.h>
+#include <ark/util/profiler.h>
 
 namespace ark {
 
 FlatTree WorkingTree::scan() const {
+  ARK_PROF_SCOPE("worktree.scan");
   FlatTree files;
   const std::filesystem::path root = repo_.root();
   forEachFile(root, [&](const std::filesystem::path &path) {

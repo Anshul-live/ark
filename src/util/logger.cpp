@@ -1,5 +1,6 @@
 #include <ark/util/logger.h>
 #include <ark/repo/repository.h>
+#include <ark/util/profiler.h>
 #include <iostream>
 #include <filesystem>
 
@@ -92,6 +93,8 @@ void Logger::log(LogLevel level, const std::string& message) {
     }
     
     if (fileStream && fileStream->is_open()) {
+        ARK_PROF_SCOPE("log.write");
+        ARK_PROF_COUNT("log.lines", 1);
         *fileStream << logLine << std::endl;
         fileStream->flush();
     }

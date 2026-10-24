@@ -3,6 +3,7 @@
 #include <ark/objects/tree.h>
 #include <ark/repo/index.h>
 #include <ark/storage/object_store.h>
+#include <ark/util/profiler.h>
 
 #include <map>
 #include <optional>
@@ -47,6 +48,7 @@ TreeBuilder TreeBuilder::fromFlatTree(const FlatTree &files) {
 }
 
 ObjectHash TreeBuilder::writeNode(const Node &node, ObjectStore &store) {
+  ARK_PROF_SCOPE("tree.write.dir");
   Tree tree;
   for (const auto &[name, child] : node.children) {
     if (child->leaf) {
@@ -67,7 +69,13 @@ ObjectHash TreeBuilder::write(ObjectStore &store) const {
 }
 
 ObjectHash writeTreeFromIndex(const ::Index &index, ObjectStore &store) {
-  return TreeBuilder::fromFlatTree(index.entries()).write(store);
+  ARK_PROF_SCOPE("tree.build");
+  TreeBuilder builder;
+  {
+    ARK_PROF_SCOPE("tree.build.insert");
+    builder = TreeBuilder::fromFlatTree(index.entries());
+  }
+  return builder.write(store);
 }
 
 } // namespace ark

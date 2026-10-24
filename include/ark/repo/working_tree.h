@@ -4,6 +4,7 @@
 #include <ark/objects/flat_tree.h>
 #include <ark/repo/ignore_rules.h>
 #include <ark/repo/repository.h>
+#include <ark/util/profiler.h>
 
 #include <filesystem>
 #include <utility>
@@ -32,10 +33,12 @@ public:
   template <class Visit, class Missing>
   bool forEachFile(const std::filesystem::path &start, Visit visit,
                    Missing onMissing) const {
+    ARK_PROF_SCOPE("walk");
     std::vector<std::filesystem::path> pending{start};
     for (size_t i = 0; i < pending.size(); i++) {
       std::filesystem::path path = std::filesystem::absolute(pending[i]);
 
+      ARK_PROF_COUNT("walk.entries", 1);
       if (ignore_.matches(path, false)) {
         continue;
       }
@@ -50,6 +53,7 @@ public:
         if (ignore_.matches(path, true)) {
           continue;
         }
+        ARK_PROF_COUNT("walk.dirs", 1);
         for (const auto &entry : std::filesystem::directory_iterator(path)) {
           pending.push_back(entry.path());
         }

@@ -7,6 +7,7 @@
 #include <ark/core/exceptions.h>
 #include <functional>
 #include <ark/util/logger.h>
+#include <ark/util/profiler.h>
 #include <ark/repo/repository.h>
 #include <unordered_map>
 
@@ -22,6 +23,13 @@ static void configureLogging() {
   }
 }
 
+// Writes the profile on every return path. Declared before the scopes below, so
+// the scopes close first and their times are included.
+struct ProfileDump {
+  std::string command;
+  ~ProfileDump() { ark::prof::dump(command); }
+};
+
 int main(int argc, char *argv[]) {
   try {
     if (argc < 2) {
@@ -30,6 +38,8 @@ int main(int argc, char *argv[]) {
     }
 
     std::string cmd = argv[1];
+    ProfileDump profileDump{cmd};
+    ARK_PROF_SCOPE("total");
 
     Repository repo = Repository::discover();
 
@@ -62,7 +72,11 @@ int main(int argc, char *argv[]) {
       return 1;
     }
 
-    int result = it->second(repo, args);
+    int result;
+    {
+      ARK_PROF_SCOPE("command");
+      result = it->second(repo, args);
+    }
 
     if (cmd == "init" && result == 0) {
       configureLogging();

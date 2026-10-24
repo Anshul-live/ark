@@ -1,0 +1,50 @@
+#ifndef ARK_UTIL_PROFILER_H
+#define ARK_UTIL_PROFILER_H
+
+#include <chrono>
+#include <cstdint>
+#include <string>
+
+// Phase profiler. Off unless ARK_PROFILE is set to a file path; when off, every
+// scope costs one branch. When on, each scope records how many times it ran and
+// its inclusive time (everything inside it) and exclusive time (inclusive minus
+// the scopes nested in it). At exit the totals are appended to that file as TSV:
+//   <command>  scope    <name>     <calls>  <inclusive_ns>  <exclusive_ns>
+//   <command>  counter  <name>     <value>
+namespace ark::prof {
+
+bool enabled();
+
+class ScopeTimer {
+public:
+  explicit ScopeTimer(const char *name);
+  ~ScopeTimer();
+  ScopeTimer(const ScopeTimer &) = delete;
+  ScopeTimer &operator=(const ScopeTimer &) = delete;
+
+private:
+  const char *name_;
+  bool active_;
+  std::chrono::steady_clock::time_point start_;
+  ScopeTimer *parent_;
+  std::uint64_t childNs_ = 0;
+};
+
+void count(const char *name, std::uint64_t amount = 1);
+
+// Writes the accumulated totals for `command` and clears them.
+void dump(const std::string &command);
+
+} // namespace ark::prof
+
+#define ARK_PROF_CONCAT_(a, b) a##b
+#define ARK_PROF_CONCAT(a, b) ARK_PROF_CONCAT_(a, b)
+#define ARK_PROF_SCOPE(name)                                                   \
+  ark::prof::ScopeTimer ARK_PROF_CONCAT(arkProfScope_, __LINE__)(name)
+#define ARK_PROF_COUNT(name, amount)                                           \
+  do {                                                                         \
+    if (ark::prof::enabled())                                                  \
+      ark::prof::count(name, amount);                                          \
+  } while (0)
+
+#endif
