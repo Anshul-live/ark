@@ -75,6 +75,12 @@ add_library(ark_core STATIC
     src/util/profiler.cpp
 )
 target_include_directories(ark_core PUBLIC ${CMAKE_SOURCE_DIR}/include)
+# Phase profiler (ARK_PROFILE=<file>, see include/ark/util/profiler.h). Off by default so normal
+# builds contain no profiling code; the playground's bench and profile commands turn it on.
+option(ARK_PROFILER "Compile in the ARK_PROFILE phase profiler" OFF)
+if (ARK_PROFILER)
+    target_compile_definitions(ark_core PUBLIC ARK_PROFILER)
+endif()
 target_link_libraries(ark_core PUBLIC OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB)
 if (APPLE)
     target_compile_definitions(ark_core PUBLIC _DARWIN_C_SOURCE)
