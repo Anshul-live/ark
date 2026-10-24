@@ -1,4 +1,5 @@
 #include <ark/core/file_mode.h>
+#include <ark/util/profiler.h>
 
 namespace ark {
 
@@ -29,6 +30,7 @@ std::optional<FileMode> parseFileMode(std::string_view text) {
 }
 
 std::optional<FileMode> detectFileMode(const std::filesystem::path &path) {
+  ARK_PROF_SCOPE("fs.stat");
   std::error_code ec;
   auto st = std::filesystem::symlink_status(path, ec);
   if (ec)

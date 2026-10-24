@@ -3,6 +3,7 @@
 #include <ark/repo/repository.h>
 #include <ark/util/logger.h>
 #include <ark/core/exceptions.h>
+#include <ark/util/profiler.h>
 #include <fstream>
 
 Index::Index(const Repository& repo) : repo_(&repo) {}
@@ -30,6 +31,7 @@ void Index::clear() {
 }
 
 void Index::load() {
+    ARK_PROF_SCOPE("index.load");
     entries_.clear();
     LOG_DEBUG("Loading index");
 
@@ -52,6 +54,7 @@ void Index::load() {
 }
 
 void Index::save() const {
+    ARK_PROF_SCOPE("index.save");
     LOG_DEBUG("Saving index");
 
     try {

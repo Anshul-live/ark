@@ -1,6 +1,7 @@
 #include <ark/repo/checkout.h>
 
 #include <ark/repo/repository.h>
+#include <ark/util/profiler.h>
 #include <ark/storage/object_format.h>
 #include <ark/storage/object_store.h>
 
@@ -94,11 +95,14 @@ std::string Checkout::fullPath(const RepoPath &path) const {
 }
 
 std::string Checkout::blobData(const ObjectHash &hash) const {
+  ARK_PROF_SCOPE("checkout.blob");
   std::string framed = store_.readFramed(hash).value_or("");
   return parseObjectFrame(hash, framed).body;
 }
 
 void Checkout::apply(const std::vector<FileChange> &changes) {
+  ARK_PROF_SCOPE("checkout.apply");
+  ARK_PROF_COUNT("checkout.changes", changes.size());
   for (const FileChange &change : changes)
     if (change.kind == ChangeKind::Deleted)
       removeFile(fullPath(change.path));

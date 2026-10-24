@@ -1,6 +1,7 @@
 #include <ark/repo/status.h>
 
 #include <ark/repo/index.h>
+#include <ark/util/profiler.h>
 
 #include <set>
 
@@ -8,6 +9,7 @@ namespace ark {
 
 StatusReport computeStatus(const Index &index, const FlatTree &headTree,
                            const FlatTree &worktree) {
+  ARK_PROF_SCOPE("status.compare");
   StatusReport report;
   std::set<RepoPath> staged;
 
@@ -34,6 +36,7 @@ StatusReport computeStatus(const Index &index, const FlatTree &headTree,
 }
 
 void printStatus(const StatusReport &report, std::ostream &out) {
+  ARK_PROF_SCOPE("status.print");
   out << "Changes to be committed:\n";
   for (const RepoPath &path : report.staged)
     out << "\033[32m" << path.str() << "\033[0m\n";
