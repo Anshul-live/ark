@@ -1,5 +1,7 @@
 #include <ark/util/profiler.h>
 
+#ifdef ARK_PROFILER
+
 #include <cstdlib>
 #include <fstream>
 #include <map>
@@ -75,3 +77,5 @@ void dump(const std::string &command) {
 }
 
 } // namespace ark::prof
+
+#endif // ARK_PROFILER

@@ -23,13 +23,6 @@ static void configureLogging() {
   }
 }
 
-// Writes the profile on every return path. Declared before the scopes below, so
-// the scopes close first and their times are included.
-struct ProfileDump {
-  std::string command;
-  ~ProfileDump() { ark::prof::dump(command); }
-};
-
 int main(int argc, char *argv[]) {
   try {
     if (argc < 2) {
@@ -38,7 +31,8 @@ int main(int argc, char *argv[]) {
     }
 
     std::string cmd = argv[1];
-    ProfileDump profileDump{cmd};
+    // Declared before the scope below, so the scope closes first and its time is included.
+    ARK_PROF_SESSION(cmd);
     ARK_PROF_SCOPE("total");
 
     Repository repo = Repository::discover();
