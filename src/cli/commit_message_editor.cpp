@@ -1,5 +1,6 @@
 #include <ark/cli/commit_message_editor.h>
 #include <ark/util/fs.h>
+#include <ark/util/profiler.h>
 #include <string>
 #include <filesystem>
 #include <fstream>
@@ -15,6 +16,7 @@ std::string CommitMessageEditor::resolveEditorCommand() {
 }
 
 void CommitMessageEditor::runEditor(const std::string& editor, const std::string& file) {
+    ARK_PROF_SCOPE("editor.run");
     std::string cmd = editor + " " + file;
     int ret = std::system(cmd.c_str());
     if (ret != 0) {
